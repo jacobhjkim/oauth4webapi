@@ -135,3 +135,7 @@ tap/run-*.cjs
 tap/.workerd.capnp
 tap/.workers.capnp
 submissions
+
+# ide
+.idea
+.vscode

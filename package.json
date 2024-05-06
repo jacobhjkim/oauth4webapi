@@ -1,5 +1,5 @@
 {
-  "name": "oauth4webapi",
+  "name": "@jacobkim/oauth4webapi",
   "version": "2.10.4",
   "description": "OAuth 2 / OpenID Connect for JavaScript Runtimes",
   "keywords": [
@@ -33,13 +33,13 @@
     "workerd",
     "workers"
   ],
-  "homepage": "https://github.com/panva/oauth4webapi",
-  "repository": "panva/oauth4webapi",
+  "homepage": "https://github.com/jacobhjkim/oauth4webapi",
+  "repository": "jacobhjkim/oauth4webapi",
   "funding": {
-    "url": "https://github.com/sponsors/panva"
+    "url": "https://github.com/sponsors/jacobhjkim"
   },
   "license": "MIT",
-  "author": "Filip Skokan <panva.ip@gmail.com>",
+  "author": "Jacob Kim <hello@jacob.kim>",
   "sideEffects": false,
   "type": "module",
   "main": "./build/index.js",
