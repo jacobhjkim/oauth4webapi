@@ -2,53 +2,46 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
 ## Indexable
 
-▪ [claim: `string`]: [`JsonValue`](../types/JsonValue.md) \| `undefined`
-
-## Table of contents
-
-### Properties
-
-- [country](UserInfoAddress.md#country)
-- [formatted](UserInfoAddress.md#formatted)
-- [locality](UserInfoAddress.md#locality)
-- [postal\_code](UserInfoAddress.md#postal_code)
-- [region](UserInfoAddress.md#region)
-- [street\_address](UserInfoAddress.md#street_address)
+ \[`claim`: `string`\]: [`JsonValue`](../type-aliases/JsonValue.md) \| `undefined`
 
 ## Properties
 
-### country
+### country?
 
-• `Optional` `Readonly` **country**: `string`
+• `readonly` `optional` **country**: `string`
 
-___
+***
 
-### formatted
+### formatted?
 
-• `Optional` `Readonly` **formatted**: `string`
+• `readonly` `optional` **formatted**: `string`
 
-___
+***
 
-### locality
+### locality?
 
-• `Optional` `Readonly` **locality**: `string`
+• `readonly` `optional` **locality**: `string`
 
-___
+***
 
-### postal\_code
+### postal\_code?
 
-• `Optional` `Readonly` **postal\_code**: `string`
+• `readonly` `optional` **postal\_code**: `string`
 
-___
+***
 
-### region
+### region?
 
-• `Optional` `Readonly` **region**: `string`
+• `readonly` `optional` **region**: `string`
 
-___
+***
 
-### street\_address
+### street\_address?
 
-• `Optional` `Readonly` **street\_address**: `string`
+• `readonly` `optional` **street\_address**: `string`

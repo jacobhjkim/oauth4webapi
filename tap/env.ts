@@ -1,7 +1,4 @@
 // @ts-ignore
-import packageLock from '../package-lock.json' assert { type: 'json' }
-
-// @ts-ignore
 export const isBun = typeof Bun !== 'undefined'
 
 // @ts-ignore
@@ -36,15 +33,9 @@ async function isEngine(engine: string) {
   return userAgentData.engine.name === engine
 }
 
-async function isVersionAtLeast(version: number) {
-  const userAgentData = await parseUserAgent()
-  return parseInt(userAgentData.browser.version.split('.')[0], 10) >= version
-}
-
 export const isBlink = isBrowser && (await isEngine('Blink'))
 
 export const isWebKit = isBrowser && (await isEngine('WebKit'))
-export const isWebKitAbove17 = isBrowser && isWebKit && (await isVersionAtLeast(17))
 
 export const isGecko = isBrowser && (await isEngine('Gecko'))
 

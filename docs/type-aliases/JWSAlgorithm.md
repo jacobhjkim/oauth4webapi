@@ -1,14 +1,18 @@
-# Type alias: JWSAlgorithm
+# Type Alias: JWSAlgorithm
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-Ƭ **JWSAlgorithm**: ``"PS256"`` \| ``"ES256"`` \| ``"RS256"`` \| ``"EdDSA"`` \| ``"ES384"`` \| ``"PS384"`` \| ``"RS384"`` \| ``"ES512"`` \| ``"PS512"`` \| ``"RS512"``
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
+• **JWSAlgorithm**: `"PS256"` \| `"ES256"` \| `"RS256"` \| `"EdDSA"` \| `"ES384"` \| `"PS384"` \| `"RS384"` \| `"ES512"` \| `"PS512"` \| `"RS512"`
 
 Supported JWS `alg` Algorithm identifiers.
 
-**`Example`**
+## Examples
 
-CryptoKey algorithm for the `PS256`, `PS384`, or `PS512` JWS Algorithm Identifiers
+[CryptoKey.algorithm](https://developer.mozilla.org/docs/Web/API/CryptoKey/algorithm) for the `PS256`, `PS384`, or `PS512` JWS Algorithm Identifiers
 
 ```ts
 interface PS256 extends RsaHashedKeyAlgorithm {
@@ -27,9 +31,7 @@ interface PS512 extends RsaHashedKeyAlgorithm {
 }
 ```
 
-**`Example`**
-
-CryptoKey algorithm for the `ES256`, `ES384`, or `ES512` JWS Algorithm Identifiers
+[CryptoKey.algorithm](https://developer.mozilla.org/docs/Web/API/CryptoKey/algorithm) for the `ES256`, `ES384`, or `ES512` JWS Algorithm Identifiers
 
 ```ts
 interface ES256 extends EcKeyAlgorithm {
@@ -48,9 +50,7 @@ interface ES512 extends EcKeyAlgorithm {
 }
 ```
 
-**`Example`**
-
-CryptoKey algorithm for the `RS256`, `RS384`, or `RS512` JWS Algorithm Identifiers
+[CryptoKey.algorithm](https://developer.mozilla.org/docs/Web/API/CryptoKey/algorithm) for the `RS256`, `RS384`, or `RS512` JWS Algorithm Identifiers
 
 ```ts
 interface RS256 extends RsaHashedKeyAlgorithm {
@@ -69,9 +69,7 @@ interface RS512 extends RsaHashedKeyAlgorithm {
 }
 ```
 
-**`Example`**
-
-CryptoKey algorithm for the `EdDSA` JWS Algorithm Identifier (Experimental)
+[CryptoKey.algorithm](https://developer.mozilla.org/docs/Web/API/CryptoKey/algorithm) for the `EdDSA` JWS Algorithm Identifier (Experimental)
 
 Runtime support for this algorithm is limited, it depends on the [Secure Curves in the Web
 Cryptography API](https://wicg.github.io/webcrypto-secure-curves/) proposal which is yet to be

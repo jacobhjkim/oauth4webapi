@@ -2,34 +2,30 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-## Table of contents
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
 
-### Properties
-
-- [crv](GenerateKeyPairOptions.md#crv)
-- [extractable](GenerateKeyPairOptions.md#extractable)
-- [modulusLength](GenerateKeyPairOptions.md#moduluslength)
+***
 
 ## Properties
 
-### crv
+### crv?
 
-• `Optional` **crv**: ``"Ed25519"`` \| ``"Ed448"``
+• `optional` **crv**: `"Ed25519"` \| `"Ed448"`
 
-(EdDSA algorithms only) The EdDSA sub-type. Default is `Ed25519`.
+(EdDSA algorithm only) The EdDSA sub-type. Default is `Ed25519`.
 
-___
+***
 
-### extractable
+### extractable?
 
-• `Optional` **extractable**: `boolean`
+• `optional` **extractable**: `boolean`
 
 Indicates whether or not the private key may be exported. Default is `false`.
 
-___
+***
 
-### modulusLength
+### modulusLength?
 
-• `Optional` **modulusLength**: `number`
+• `optional` **modulusLength**: `number`
 
 (RSA algorithms only) The length, in bits, of the RSA modulus. Default is `2048`.

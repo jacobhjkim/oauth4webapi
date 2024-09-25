@@ -2,116 +2,100 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
 ## Indexable
 
-▪ [claim: `string`]: [`JsonValue`](../types/JsonValue.md) \| `undefined`
-
-## Table of contents
-
-### Properties
-
-- [active](IntrospectionResponse.md#active)
-- [aud](IntrospectionResponse.md#aud)
-- [authorization\_details](IntrospectionResponse.md#authorization_details)
-- [client\_id](IntrospectionResponse.md#client_id)
-- [cnf](IntrospectionResponse.md#cnf)
-- [exp](IntrospectionResponse.md#exp)
-- [iat](IntrospectionResponse.md#iat)
-- [iss](IntrospectionResponse.md#iss)
-- [jti](IntrospectionResponse.md#jti)
-- [nbf](IntrospectionResponse.md#nbf)
-- [scope](IntrospectionResponse.md#scope)
-- [sid](IntrospectionResponse.md#sid)
-- [sub](IntrospectionResponse.md#sub)
-- [token\_type](IntrospectionResponse.md#token_type)
-- [username](IntrospectionResponse.md#username)
+ \[`claim`: `string`\]: [`JsonValue`](../type-aliases/JsonValue.md) \| `undefined`
 
 ## Properties
 
 ### active
 
-• `Readonly` **active**: `boolean`
+• `readonly` **active**: `boolean`
 
-___
+***
 
-### aud
+### aud?
 
-• `Optional` `Readonly` **aud**: `string` \| `string`[]
+• `readonly` `optional` **aud**: `string` \| `string`[]
 
-___
+***
 
-### authorization\_details
+### authorization\_details?
 
-• `Optional` `Readonly` **authorization\_details**: [`AuthorizationDetails`](AuthorizationDetails.md)[]
+• `readonly` `optional` **authorization\_details**: [`AuthorizationDetails`](AuthorizationDetails.md)[]
 
-___
+***
 
-### client\_id
+### client\_id?
 
-• `Optional` `Readonly` **client\_id**: `string`
+• `readonly` `optional` **client\_id**: `string`
 
-___
+***
 
-### cnf
+### cnf?
 
-• `Optional` `Readonly` **cnf**: [`ConfirmationClaims`](ConfirmationClaims.md)
+• `readonly` `optional` **cnf**: [`ConfirmationClaims`](ConfirmationClaims.md)
 
-___
+***
 
-### exp
+### exp?
 
-• `Optional` `Readonly` **exp**: `number`
+• `readonly` `optional` **exp**: `number`
 
-___
+***
 
-### iat
+### iat?
 
-• `Optional` `Readonly` **iat**: `number`
+• `readonly` `optional` **iat**: `number`
 
-___
+***
 
-### iss
+### iss?
 
-• `Optional` `Readonly` **iss**: `string`
+• `readonly` `optional` **iss**: `string`
 
-___
+***
 
-### jti
+### jti?
 
-• `Optional` `Readonly` **jti**: `string`
+• `readonly` `optional` **jti**: `string`
 
-___
+***
 
-### nbf
+### nbf?
 
-• `Optional` `Readonly` **nbf**: `number`
+• `readonly` `optional` **nbf**: `number`
 
-___
+***
 
-### scope
+### scope?
 
-• `Optional` `Readonly` **scope**: `string`
+• `readonly` `optional` **scope**: `string`
 
-___
+***
 
-### sid
+### sid?
 
-• `Optional` `Readonly` **sid**: `string`
+• `readonly` `optional` **sid**: `string`
 
-___
+***
 
-### sub
+### sub?
 
-• `Optional` `Readonly` **sub**: `string`
+• `readonly` `optional` **sub**: `string`
 
-___
+***
 
-### token\_type
+### token\_type?
 
-• `Optional` `Readonly` **token\_type**: `string`
+• `readonly` `optional` **token\_type**: `string`
 
-___
+***
 
-### username
+### username?
 
-• `Optional` `Readonly` **username**: `string`
+• `readonly` `optional` **username**: `string`

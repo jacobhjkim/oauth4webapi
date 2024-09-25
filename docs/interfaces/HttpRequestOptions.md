@@ -2,65 +2,50 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-## Table of contents
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
 
-### Properties
-
-- [[customFetch]](HttpRequestOptions.md#customfetch)
-- [headers](HttpRequestOptions.md#headers)
-- [signal](HttpRequestOptions.md#signal)
+***
 
 ## Properties
 
-### [customFetch]
+### \[customFetch\]()?
 
-• `Optional` **[customFetch]**: (`input`: `RequestInfo` \| [`URL`]( https://developer.mozilla.org/docs/Web/API/URL ), `init?`: `RequestInit`) => [`Promise`]( https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise )\<[`Response`]( https://developer.mozilla.org/docs/Web/API/Response )\>
+• `optional` **\[customFetch\]**: (`input`, `init`?) => [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
 
 See [customFetch](../variables/customFetch.md).
 
-___
+#### Parameters
 
-### headers
+| Parameter | Type |
+| ------ | ------ |
+| `input` | `RequestInfo` \| [`URL`](https://developer.mozilla.org/docs/Web/API/URL) |
+| `init`? | `RequestInit` |
 
-• `Optional` **headers**: [`Record`]( https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type )\<`string`, `string`\> \| [`string`, `string`][] \| [`Headers`]( https://developer.mozilla.org/docs/Web/API/Headers )
+#### Returns
 
-Headers to additionally send with the HTTP Request(s) triggered by this function's invocation.
+[`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
 
-___
+***
 
-### signal
+### headers?
 
-• `Optional` **signal**: [`AbortSignal`]( https://developer.mozilla.org/docs/Web/API/AbortSignal ) \| () => [`AbortSignal`]( https://developer.mozilla.org/docs/Web/API/AbortSignal )
+• `optional` **headers**: [`Record`](https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type)\<`string`, `string`\> \| [`string`, `string`][] \| [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers)
 
-An AbortSignal instance, or a factory returning one, to abort the HTTP Request(s) triggered by
+Headers to additionally send with the HTTP request(s) triggered by this function's invocation.
+
+***
+
+### signal?
+
+• `optional` **signal**: [`AbortSignal`](https://developer.mozilla.org/docs/Web/API/AbortSignal) \| () => [`AbortSignal`](https://developer.mozilla.org/docs/Web/API/AbortSignal)
+
+An AbortSignal instance, or a factory returning one, to abort the HTTP request(s) triggered by
 this function's invocation.
 
-**`Example`**
+#### Example
 
 A 5000ms timeout AbortSignal for every request
 
 ```js
 const signal = () => AbortSignal.timeout(5_000) // Note: AbortSignal.timeout may not yet be available in all runtimes.
 ```
-
-## Hierarchy
-
-- **`HttpRequestOptions`**
-
-  ↳ [`DiscoveryRequestOptions`](DiscoveryRequestOptions.md)
-
-  ↳ [`PushedAuthorizationRequestOptions`](PushedAuthorizationRequestOptions.md)
-
-  ↳ [`UserInfoRequestOptions`](UserInfoRequestOptions.md)
-
-  ↳ [`TokenEndpointRequestOptions`](TokenEndpointRequestOptions.md)
-
-  ↳ [`ClientCredentialsGrantRequestOptions`](ClientCredentialsGrantRequestOptions.md)
-
-  ↳ [`RevocationRequestOptions`](RevocationRequestOptions.md)
-
-  ↳ [`IntrospectionRequestOptions`](IntrospectionRequestOptions.md)
-
-  ↳ [`DeviceAuthorizationRequestOptions`](DeviceAuthorizationRequestOptions.md)
-
-  ↳ [`ValidateJWTAccessTokenOptions`](ValidateJWTAccessTokenOptions.md)

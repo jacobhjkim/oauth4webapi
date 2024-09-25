@@ -1,0 +1,87 @@
+diff --git a/examples/fapi2.ts b/examples/fapi2-message-signing.ts
+index 80ec0f4..5afce7e 100644
+--- a/examples/fapi2.ts
++++ b/examples/fapi2-message-signing.ts
+@@ -24,6 +24,11 @@ let DPoP!: CryptoKeyPair
+  * client authentication method.
+  */
+ let clientPrivateKey!: CryptoKey
++/**
++ * A key that is pre-registered at the Authorization Server that the client is supposed to sign its
++ * Request Objects with.
++ */
++let jarPrivateKey!: CryptoKey
+ 
+ // End of prerequisites
+ 
+@@ -45,8 +50,8 @@ const code_challenge_method = 'S256'
+ const code_verifier = oauth.generateRandomCodeVerifier()
+ const code_challenge = await oauth.calculatePKCECodeChallenge(code_verifier)
+ 
+-// Pushed Authorization Request & Response (PAR)
+-let request_uri: string
++// Signed Request Object (JAR)
++let request: string
+ {
+   const params = new URLSearchParams()
+   params.set('client_id', client.client_id)
+@@ -54,7 +59,18 @@ let request_uri: string
+   params.set('code_challenge_method', code_challenge_method)
+   params.set('redirect_uri', redirect_uri)
+   params.set('response_type', 'code')
+-  params.set('scope', 'api:read')
++  params.set('scope', 'openid api:read')
++  params.set('response_mode', 'jwt')
++
++  request = await oauth.issueRequestObject(as, client, params, jarPrivateKey)
++}
++
++// Pushed Authorization Request & Response (PAR)
++let request_uri: string
++{
++  const params = new URLSearchParams()
++  params.set('client_id', client.client_id)
++  params.set('request', request)
+ 
+   const pushedAuthorizationRequest = () =>
+     oauth.pushedAuthorizationRequest(as, client, params, {
+@@ -105,7 +121,7 @@ let access_token: string
+ {
+   // @ts-expect-error
+   const currentUrl: URL = getCurrentUrl()
+-  const params = oauth.validateAuthResponse(as, client, currentUrl)
++  const params = await oauth.validateJwtAuthResponse(as, client, currentUrl)
+   if (oauth.isOAuth2Error(params)) {
+     console.error('Error Response', params)
+     throw new Error() // Handle OAuth 2.0 redirect error
+@@ -124,16 +140,16 @@ let access_token: string
+     throw new Error() // Handle WWW-Authenticate Challenges as needed
+   }
+ 
+-  const processAuthorizationCodeOAuth2Response = () =>
+-    oauth.processAuthorizationCodeOAuth2Response(as, client, response)
++  const processAuthorizationCodeOpenIDResponse = () =>
++    oauth.processAuthorizationCodeOpenIDResponse(as, client, response)
+ 
+-  let result = await processAuthorizationCodeOAuth2Response()
++  let result = await processAuthorizationCodeOpenIDResponse()
+   if (oauth.isOAuth2Error(result)) {
+     console.error('Error Response', result)
+     if (result.error === 'use_dpop_nonce') {
+       // the AS-signalled nonce is now cached, retrying
+       response = await authorizationCodeGrantRequest()
+-      result = await processAuthorizationCodeOAuth2Response()
++      result = await processAuthorizationCodeOpenIDResponse()
+       if (oauth.isOAuth2Error(result)) {
+         throw new Error() // Handle OAuth 2.0 response body error
+       }
+@@ -142,6 +158,9 @@ let access_token: string
+     }
+   }
+ 
++  // Check ID Token signature for non-repudiation purposes
++  await oauth.validateIdTokenSignature(as, result)
++
+   console.log('Access Token Response', result)
+   ;({ access_token } = result)
+ }

@@ -1,7 +1,13 @@
 import type QUnit from 'qunit'
-import * as jose from 'jose'
 
-import { isDpopNonceError, setup } from './helper.js'
+import {
+  assertNoWwwAuthenticateChallenges,
+  isDpopNonceError,
+  assertNotOAuth2Error,
+  setup,
+  unexpectedAuthorizationServerError,
+  random,
+} from './helper.js'
 import * as lib from '../src/index.js'
 import { keys } from './keys.js'
 
@@ -11,74 +17,52 @@ export default (QUnit: QUnit) => {
 
   const alg = 'ES256'
 
-  const jarmOptions = [false, true]
-  const parOptions = [false, true]
-  const jarOptions = [false, true]
-  const dpopOptions = [false, true]
-  const jwtUserinfoOptions = [false, true]
-
-  const cartesianMatrix = []
-
-  for (const jarm of jarmOptions) {
-    for (const par of parOptions) {
-      for (const jar of jarOptions) {
-        for (const dpop of dpopOptions) {
-          for (const jwtUserinfo of jwtUserinfoOptions) {
-            cartesianMatrix.push({
-              jarm,
-              par,
-              jar,
-              dpop,
-              jwtUserinfo,
-            })
-          }
-        }
-      }
+  const options = (
+    ...flags: Array<'jarm' | 'par' | 'jar' | 'dpop' | 'jwtUserinfo' | 'hybrid' | 'encryption'>
+  ) => {
+    const conf = {
+      jarm: false,
+      par: false,
+      jar: false,
+      dpop: false,
+      jwtUserinfo: false,
+      hybrid: false,
+      encryption: false,
     }
+    for (const flag of flags) {
+      conf[flag] = true
+    }
+    return conf
   }
 
-  function trueCount(a: boolean[]) {
-    return a.reduce((c, x) => (x ? ++c : c), 0)
-  }
+  const testCases = [
+    options(),
+    options('par'),
+    options('jar'),
+    options('dpop'),
+    options('par', 'jar'),
+    options('par', 'dpop'),
+    options('encryption'),
+    options('jarm'),
+    options('jarm', 'encryption'),
+    options('jwtUserinfo'),
+    options('jwtUserinfo', 'encryption'),
+    options('hybrid'),
+    options('hybrid', 'encryption'),
+  ]
 
-  for (const config of cartesianMatrix) {
-    const { jarm, par, jar, dpop, jwtUserinfo } = config
-
-    const options = [jarm, par, jar, dpop, jwtUserinfo]
-
-    // Test
-    // - individual options
-    // - no options
-    // - all options
-    // - par + jar
-    // - par + jar + dpop
-    // - par + dpop
-
-    switch (trueCount(options)) {
-      case 0:
-      case 1:
-      case options.length:
-        break
-      case 2:
-        if ((par && jar) || (par && dpop)) {
-          break
-        }
-      case 3:
-        if (par && jar && dpop) {
-          break
-        }
-      default:
-        continue
-    }
+  for (const config of testCases) {
+    const { jarm, par, jar, dpop, jwtUserinfo, hybrid, encryption } = config
 
     function label(config: Record<string, boolean>) {
       const keys = Object.keys(
         Object.fromEntries(Object.entries(config).filter(([, v]) => v === true)),
       )
-      return keys.length ? `w/ ${keys.join(', ')}` : ''
+      let msg = `w/ response_type=${hybrid ? 'code id_token' : 'code'}`
+      return keys.length ? `${msg}, ${keys.join(', ')}` : msg
     }
 
-    test(`end-to-end code flow ${label(config)}`, async (t) => {
+    test(`end-to-end ${label(config)}`, async (t) => {
       const kp = await keys[alg]
       const { client, issuerIdentifier, clientPrivateKey } = await setup(
         alg,
@@ -87,8 +71,12 @@ export default (QUnit: QUnit) => {
         jar,
         jwtUserinfo,
         false,
+        hybrid
+          ? ['implicit', 'authorization_code', 'refresh_token']
+          : ['authorization_code', 'refresh_token'],
+        encryption,
       )
-      const DPoP = dpop ? await lib.generateKeyPair(<lib.JWSAlgorithm>alg) : undefined
+      const DPoP = dpop ? await lib.generateKeyPair(alg as lib.JWSAlgorithm) : undefined
 
       const as = await lib
         .discoveryRequest(issuerIdentifier)
@@ -99,14 +87,25 @@ export default (QUnit: QUnit) => {
       const code_challenge_method = 'S256'
 
       let params = new URLSearchParams()
+      const maxAge = random() ? (random() ? 30 : 0) : undefined
+
+      let nonce: string | undefined
+      if (hybrid) {
+        nonce = lib.generateRandomNonce()
+        params.set('nonce', nonce)
+      }
 
       params.set('client_id', client.client_id)
       params.set('code_challenge', code_challenge)
       params.set('code_challenge_method', code_challenge_method)
       params.set('redirect_uri', 'http://localhost:3000/cb')
-      params.set('response_type', 'code')
+      params.set('response_type', hybrid ? 'code id_token' : 'code')
       params.set('scope', 'openid offline_access')
       params.set('prompt', 'consent')
+
+      if (maxAge !== undefined) {
+        params.set('max_age', maxAge.toString())
+      }
 
       if (jarm) {
         params.set('response_mode', 'jwt')
@@ -127,10 +126,7 @@ export default (QUnit: QUnit) => {
         const pushedAuthorizationRequest = () =>
           lib.pushedAuthorizationRequest(as, client, params, { DPoP })
         let response = await pushedAuthorizationRequest()
-        if (lib.parseWwwAuthenticateChallenges(response)) {
-          t.ok(0)
-          throw new Error()
-        }
+        assertNoWwwAuthenticateChallenges(response)
 
         const processPushedAuthorizationResponse = () =>
           lib.processPushedAuthorizationResponse(as, client, response)
@@ -138,18 +134,11 @@ export default (QUnit: QUnit) => {
         if (lib.isOAuth2Error(result)) {
           if (isDpopNonceError(result)) {
             response = await pushedAuthorizationRequest()
-            if (lib.parseWwwAuthenticateChallenges(response)) {
-              t.ok(0)
-              throw new Error()
-            }
+            assertNoWwwAuthenticateChallenges(response)
             result = await processPushedAuthorizationResponse()
-            if (lib.isOAuth2Error(result)) {
-              t.ok(0)
-              throw new Error()
-            }
+            if (!assertNotOAuth2Error(result)) return
           } else {
-            t.ok(0)
-            throw new Error()
+            throw unexpectedAuthorizationServerError(result)
           }
         }
         for (const param of [...params.keys()]) {
@@ -177,16 +166,25 @@ export default (QUnit: QUnit) => {
         )
       }
 
-      const callbackParams = await (jarm ? lib.validateJwtAuthResponse : lib.validateAuthResponse)(
-        as,
-        client,
-        currentUrl,
-        lib.expectNoState,
-      )
-      if (lib.isOAuth2Error(callbackParams)) {
-        t.ok(0)
-        throw new Error()
+      let callbackParams: URLSearchParams | lib.OAuth2Error
+      if (hybrid) {
+        callbackParams = await lib.validateDetachedSignatureResponse(
+          as,
+          client,
+          currentUrl,
+          nonce!,
+          lib.expectNoState,
+          maxAge,
+        )
+      } else {
+        callbackParams = await (jarm ? lib.validateJwtAuthResponse : lib.validateAuthResponse)(
+          as,
+          client,
+          currentUrl,
+          lib.expectNoState,
+        )
       }
+      if (!assertNotOAuth2Error(callbackParams)) return
 
       {
         const authorizationCodeGrantRequest = () =>
@@ -200,35 +198,29 @@ export default (QUnit: QUnit) => {
           )
         let response = await authorizationCodeGrantRequest()
 
-        if (lib.parseWwwAuthenticateChallenges(response)) {
-          t.ok(0)
-          throw new Error()
-        }
+        assertNoWwwAuthenticateChallenges(response)
 
         const processAuthorizationCodeOpenIDResponse = () =>
-          lib.processAuthorizationCodeOpenIDResponse(as, client, response)
+          lib.processAuthorizationCodeOpenIDResponse(as, client, response, nonce, maxAge)
         let result = await processAuthorizationCodeOpenIDResponse()
         if (lib.isOAuth2Error(result)) {
           if (isDpopNonceError(result)) {
             response = await authorizationCodeGrantRequest()
             result = await processAuthorizationCodeOpenIDResponse()
-            if (lib.isOAuth2Error(result)) {
-              t.ok(0)
-              throw new Error()
-            }
+            if (!assertNotOAuth2Error(result)) return
           } else {
-            t.ok(0)
-            throw new Error()
+            throw unexpectedAuthorizationServerError(result)
           }
         }
 
         const { access_token, refresh_token, token_type } = result
         t.equal(token_type, dpop ? 'dpop' : 'bearer')
         if (!refresh_token) {
-          t.ok(0)
+          t.ok(0, 'expected a refresh token to be returned')
           throw new Error()
         }
         const { sub } = lib.getValidatedIdTokenClaims(result)
+        await lib.validateIdTokenSignature(as, result)
 
         {
           const userInfoRequest = () => lib.userInfoRequest(as, client, access_token, { DPoP })
@@ -239,19 +231,15 @@ export default (QUnit: QUnit) => {
             if (isDpopNonceError(challenges)) {
               response = await userInfoRequest()
             } else {
-              t.ok(0)
-              throw new Error()
+              throw unexpectedAuthorizationServerError(challenges)
             }
           }
 
-          const clone = await response.clone().text()
-          if (jwtUserinfo) {
-            t.ok(jose.decodeJwt(clone))
-          } else {
-            t.ok(JSON.parse(clone))
-          }
-
           await lib.processUserInfoResponse(as, client, sub, response)
+
+          if (jwtUserinfo) {
+            await lib.validateJwtUserInfoSignature(as, response)
+          }
         }
 
         {
@@ -264,16 +252,12 @@ export default (QUnit: QUnit) => {
             if (isDpopNonceError(challenges)) {
               response = await refreshTokenGrantRequest()
             } else {
-              t.ok(0)
-              throw new Error()
+              throw unexpectedAuthorizationServerError(challenges)
             }
           }
 
           const result = await lib.processRefreshTokenResponse(as, client, response)
-          if (lib.isOAuth2Error(result)) {
-            t.ok(0)
-            throw new Error()
-          }
+          if (!assertNotOAuth2Error(result)) return
         }
       }
 

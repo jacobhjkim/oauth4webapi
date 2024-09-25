@@ -2,53 +2,46 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
 ## Indexable
 
-▪ [parameter: `string`]: [`JsonValue`](../types/JsonValue.md) \| `undefined`
-
-## Table of contents
-
-### Properties
-
-- [device\_code](DeviceAuthorizationResponse.md#device_code)
-- [expires\_in](DeviceAuthorizationResponse.md#expires_in)
-- [user\_code](DeviceAuthorizationResponse.md#user_code)
-- [verification\_uri](DeviceAuthorizationResponse.md#verification_uri)
-- [interval](DeviceAuthorizationResponse.md#interval)
-- [verification\_uri\_complete](DeviceAuthorizationResponse.md#verification_uri_complete)
+ \[`parameter`: `string`\]: [`JsonValue`](../type-aliases/JsonValue.md) \| `undefined`
 
 ## Properties
 
 ### device\_code
 
-• `Readonly` **device\_code**: `string`
+• `readonly` **device\_code**: `string`
 
-___
+***
 
 ### expires\_in
 
-• `Readonly` **expires\_in**: `number`
+• `readonly` **expires\_in**: `number`
 
-___
+***
 
 ### user\_code
 
-• `Readonly` **user\_code**: `string`
+• `readonly` **user\_code**: `string`
 
-___
+***
 
 ### verification\_uri
 
-• `Readonly` **verification\_uri**: `string`
+• `readonly` **verification\_uri**: `string`
 
-___
+***
 
-### interval
+### interval?
 
-• `Optional` `Readonly` **interval**: `number`
+• `readonly` `optional` **interval**: `number`
 
-___
+***
 
-### verification\_uri\_complete
+### verification\_uri\_complete?
 
-• `Optional` `Readonly` **verification\_uri\_complete**: `string`
+• `readonly` `optional` **verification\_uri\_complete**: `string`

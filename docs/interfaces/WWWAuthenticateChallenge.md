@@ -2,23 +2,20 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-## Table of contents
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
 
-### Properties
-
-- [parameters](WWWAuthenticateChallenge.md#parameters)
-- [scheme](WWWAuthenticateChallenge.md#scheme)
+***
 
 ## Properties
 
 ### parameters
 
-• `Readonly` **parameters**: [`WWWAuthenticateChallengeParameters`](WWWAuthenticateChallengeParameters.md)
+• `readonly` **parameters**: [`WWWAuthenticateChallengeParameters`](WWWAuthenticateChallengeParameters.md)
 
-___
+***
 
 ### scheme
 
-• `Readonly` **scheme**: [`Lowercase`]( https://www.typescriptlang.org/docs/handbook/2/template-literal-types.html#lowercasestringtype )\<`string`\>
+• `readonly` **scheme**: [`Lowercase`](https://www.typescriptlang.org/docs/handbook/2/template-literal-types.html#lowercasestringtype)\<`string`\>
 
 NOTE: because the value is case insensitive it is always returned lowercased

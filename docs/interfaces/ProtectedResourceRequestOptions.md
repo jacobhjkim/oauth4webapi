@@ -2,64 +2,58 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-## Table of contents
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
 
-### Properties
-
-- [DPoP](ProtectedResourceRequestOptions.md#dpop)
-- [[clockSkew]](ProtectedResourceRequestOptions.md#clockskew)
-- [[customFetch]](ProtectedResourceRequestOptions.md#customfetch)
-- [signal](ProtectedResourceRequestOptions.md#signal)
+***
 
 ## Properties
 
-### DPoP
+### \[clockSkew\]?
 
-• `Optional` **DPoP**: [`DPoPOptions`](DPoPOptions.md)
+• `optional` **\[clockSkew\]**: `number`
 
-DPoP-related options.
+See [clockSkew](../variables/clockSkew.md).
 
-___
+***
 
-### [clockSkew]
+### \[customFetch\]()?
 
-• `Optional` **[clockSkew]**: `number`
-
-Use to adjust the client's assumed current time. Positive and negative finite values
-representing seconds are allowed. Default is `0` (Date.now() + 0 seconds is used).
-
-This option only affects the request if the [DPoP](DPoPRequestOptions.md#dpop)
-option is also used.
-
-___
-
-### [customFetch]
-
-• `Optional` **[customFetch]**: (`input`: `RequestInfo` \| [`URL`]( https://developer.mozilla.org/docs/Web/API/URL ), `init?`: `RequestInit`) => [`Promise`]( https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise )\<[`Response`]( https://developer.mozilla.org/docs/Web/API/Response )\>
+• `optional` **\[customFetch\]**: (`input`, `init`?) => [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
 
 See [customFetch](../variables/customFetch.md).
 
-___
+#### Parameters
 
-### signal
+| Parameter | Type |
+| ------ | ------ |
+| `input` | `RequestInfo` \| [`URL`](https://developer.mozilla.org/docs/Web/API/URL) |
+| `init`? | `RequestInit` |
 
-• `Optional` **signal**: [`AbortSignal`]( https://developer.mozilla.org/docs/Web/API/AbortSignal ) \| () => [`AbortSignal`]( https://developer.mozilla.org/docs/Web/API/AbortSignal )
+#### Returns
 
-An AbortSignal instance, or a factory returning one, to abort the HTTP Request(s) triggered by
+[`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
+
+***
+
+### DPoP?
+
+• `optional` **DPoP**: [`DPoPOptions`](DPoPOptions.md)
+
+DPoP-related options.
+
+***
+
+### signal?
+
+• `optional` **signal**: [`AbortSignal`](https://developer.mozilla.org/docs/Web/API/AbortSignal) \| () => [`AbortSignal`](https://developer.mozilla.org/docs/Web/API/AbortSignal)
+
+An AbortSignal instance, or a factory returning one, to abort the HTTP request(s) triggered by
 this function's invocation.
 
-**`Example`**
+#### Example
 
 A 5000ms timeout AbortSignal for every request
 
 ```js
 const signal = () => AbortSignal.timeout(5_000) // Note: AbortSignal.timeout may not yet be available in all runtimes.
 ```
-
-## Hierarchy
-
-- [`Omit`]( https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys )\<[`HttpRequestOptions`](HttpRequestOptions.md), ``"headers"``\>
-
-- [`DPoPRequestOptions`](DPoPRequestOptions.md)
-
-  ↳ **`ProtectedResourceRequestOptions`**

@@ -2,31 +2,19 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
 Recognized Client Metadata that have an effect on the exposed functionality.
 
-**`See`**
+## See
 
 [IANA OAuth Client Registration Metadata registry](https://www.iana.org/assignments/oauth-parameters/oauth-parameters.xhtml#client-metadata)
 
 ## Indexable
 
-▪ [metadata: `string`]: [`JsonValue`](../types/JsonValue.md) \| `undefined`
-
-## Table of contents
-
-### Properties
-
-- [client\_id](Client.md#client_id)
-- [[clockSkew]](Client.md#clockskew)
-- [[clockTolerance]](Client.md#clocktolerance)
-- [authorization\_signed\_response\_alg](Client.md#authorization_signed_response_alg)
-- [client\_secret](Client.md#client_secret)
-- [default\_max\_age](Client.md#default_max_age)
-- [id\_token\_signed\_response\_alg](Client.md#id_token_signed_response_alg)
-- [introspection\_signed\_response\_alg](Client.md#introspection_signed_response_alg)
-- [require\_auth\_time](Client.md#require_auth_time)
-- [token\_endpoint\_auth\_method](Client.md#token_endpoint_auth_method)
-- [userinfo\_signed\_response\_alg](Client.md#userinfo_signed_response_alg)
+ \[`metadata`: `string`\]: [`JsonValue`](../type-aliases/JsonValue.md) \| `undefined`
 
 ## Properties
 
@@ -36,132 +24,164 @@ Recognized Client Metadata that have an effect on the exposed functionality.
 
 Client identifier.
 
-___
+***
 
-### [clockSkew]
+### \[clockSkew\]?
 
-• `Optional` **[clockSkew]**: `number`
+• `optional` **\[clockSkew\]**: `number`
 
-Use to adjust the client's assumed current time. Positive and negative finite values
-representing seconds are allowed. Default is `0` (Date.now() + 0 seconds is used).
+See [clockSkew](../variables/clockSkew.md).
 
-**`Example`**
+***
 
-When the client's local clock is mistakenly 1 hour in the past
+### \[clockTolerance\]?
 
-```ts
-const client: oauth.Client = {
-  client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
-  // ... other metadata
-  [oauth.clockSkew]: +(60 * 60),
-}
-```
+• `optional` **\[clockTolerance\]**: `number`
 
-**`Example`**
+See [clockTolerance](../variables/clockTolerance.md).
 
-When the client's local clock is mistakenly 1 hour in the future
+***
 
-```ts
-const client: oauth.Client = {
-  client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
-  // ... other metadata
-  [oauth.clockSkew]: -(60 * 60),
-}
-```
+### \[jweDecrypt\]?
 
-___
+• `optional` **\[jweDecrypt\]**: [`JweDecryptFunction`](JweDecryptFunction.md)
 
-### [clockTolerance]
+See [jweDecrypt](../variables/jweDecrypt.md).
 
-• `Optional` **[clockTolerance]**: `number`
+***
 
-Use to set allowed client's clock tolerance when checking DateTime JWT Claims. Only positive
-finite values representing seconds are allowed. Default is `30` (30 seconds).
+### authorization\_signed\_response\_alg?
 
-**`Example`**
-
-Tolerate 30 seconds clock skew when validating JWT claims like exp or nbf.
-
-```ts
-const client: oauth.Client = {
-  client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
-  // ... other metadata
-  [oauth.clockTolerance]: 30,
-}
-```
-
-___
-
-### authorization\_signed\_response\_alg
-
-• `Optional` **authorization\_signed\_response\_alg**: [`JWSAlgorithm`](../types/JWSAlgorithm.md)
+• `optional` **authorization\_signed\_response\_alg**: [`JWSAlgorithm`](../type-aliases/JWSAlgorithm.md)
 
 JWS `alg` algorithm required for signing authorization responses. When not configured the
-default is to allow only [supported algorithms](../types/JWSAlgorithm.md) listed in
+default is to allow only [supported algorithms](../type-aliases/JWSAlgorithm.md) listed in
 [`as.authorization_signing_alg_values_supported`](AuthorizationServer.md#authorization_signing_alg_values_supported)
 and fall back to `RS256` when the authorization server metadata is not set.
 
-___
+***
 
-### client\_secret
+### client\_secret?
 
-• `Optional` **client\_secret**: `string`
+• `optional` **client\_secret**: `string`
 
 Client secret.
 
-___
+***
 
-### default\_max\_age
+### default\_max\_age?
 
-• `Optional` **default\_max\_age**: `number`
+• `optional` **default\_max\_age**: `number`
 
 Default Maximum Authentication Age.
 
-___
+***
 
-### id\_token\_signed\_response\_alg
+### id\_token\_signed\_response\_alg?
 
-• `Optional` **id\_token\_signed\_response\_alg**: `string`
+• `optional` **id\_token\_signed\_response\_alg**: `string`
 
 JWS `alg` algorithm required for signing the ID Token issued to this Client. When not
 configured the default is to allow only algorithms listed in
 [`as.id_token_signing_alg_values_supported`](AuthorizationServer.md#id_token_signing_alg_values_supported)
 and fall back to `RS256` when the authorization server metadata is not set.
 
-___
+***
 
-### introspection\_signed\_response\_alg
+### introspection\_signed\_response\_alg?
 
-• `Optional` **introspection\_signed\_response\_alg**: `string`
+• `optional` **introspection\_signed\_response\_alg**: `string`
 
 JWS `alg` algorithm REQUIRED for signed introspection responses. When not configured the
 default is to allow only algorithms listed in
 [`as.introspection_signing_alg_values_supported`](AuthorizationServer.md#introspection_signing_alg_values_supported)
 and fall back to `RS256` when the authorization server metadata is not set.
 
-___
+***
 
-### require\_auth\_time
+### require\_auth\_time?
 
-• `Optional` **require\_auth\_time**: `boolean`
+• `optional` **require\_auth\_time**: `boolean`
 
 Boolean value specifying whether the [`auth_time`](IDToken.md#auth_time) Claim in the ID Token
 is REQUIRED. Default is `false`.
 
-___
+***
 
-### token\_endpoint\_auth\_method
+### token\_endpoint\_auth\_method?
 
-• `Optional` **token\_endpoint\_auth\_method**: [`ClientAuthenticationMethod`](../types/ClientAuthenticationMethod.md)
+• `optional` **token\_endpoint\_auth\_method**: [`ClientAuthenticationMethod`](../type-aliases/ClientAuthenticationMethod.md)
 
-Client [authentication method](../types/ClientAuthenticationMethod.md) for the client's authenticated
+Client [authentication method](../type-aliases/ClientAuthenticationMethod.md) for the client's authenticated
 requests. Default is `client_secret_basic`.
 
-___
+***
 
-### userinfo\_signed\_response\_alg
+### use\_mtls\_endpoint\_aliases?
 
-• `Optional` **userinfo\_signed\_response\_alg**: `string`
+• `optional` **use\_mtls\_endpoint\_aliases**: `boolean`
+
+Indicates the requirement for a client to use mutual TLS endpoint aliases defined by the AS
+where present. Default is `false`.
+
+When combined with [customFetch](../variables/customFetch.md) (to use a Fetch API implementation that supports client
+certificates) this can be used to target FAPI 2.0 profiles that utilize Mutual-TLS for either
+client authentication or sender constraining. FAPI 1.0 Advanced profiles that use PAR and JARM
+can also be targetted.
+
+#### Examples
+
+(Node.js) Using [nodejs/undici](https://github.com/nodejs/undici) for Mutual-TLS Client
+Authentication and Certificate-Bound Access Tokens support.
+
+```ts
+import * as undici from 'undici'
+import * as oauth from 'oauth4webapi'
+
+// Prerequisites
+let as!: oauth.AuthorizationServer
+let client!: oauth.Client & { use_mtls_endpoint_aliases: true }
+let params!: URLSearchParams
+let key!: string // PEM-encoded key
+let cert!: string // PEM-encoded certificate
+
+const agent = new undici.Agent({ connect: { key, cert } })
+
+const response = await oauth.pushedAuthorizationRequest(as, client, params, {
+  [oauth.customFetch]: (...args) =>
+    undici.fetch(args[0], { ...args[1], dispatcher: agent }),
+})
+```
+
+(Deno) Using Deno.createHttpClient API for Mutual-TLS Client Authentication and
+Certificate-Bound Access Tokens support.
+
+```ts
+import * as oauth from 'oauth4webapi'
+
+// Prerequisites
+let as!: oauth.AuthorizationServer
+let client!: oauth.Client & { use_mtls_endpoint_aliases: true }
+let params!: URLSearchParams
+let key!: string // PEM-encoded key
+let cert!: string // PEM-encoded certificate
+
+const agent = Deno.createHttpClient({ key, cert })
+
+const response = await oauth.pushedAuthorizationRequest(as, client, params, {
+  [oauth.customFetch]: (...args) => fetch(args[0], { ...args[1], client: agent }),
+})
+```
+
+#### See
+
+[RFC 8705 - OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens](https://www.rfc-editor.org/rfc/rfc8705.html)
+
+***
+
+### userinfo\_signed\_response\_alg?
+
+• `optional` **userinfo\_signed\_response\_alg**: `string`
 
 JWS `alg` algorithm REQUIRED for signing UserInfo Responses. When not configured the default is
 to allow only algorithms listed in

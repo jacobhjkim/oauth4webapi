@@ -2,76 +2,82 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-## Table of contents
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
 
-### Properties
-
-- [[clockSkew]](ValidateJWTAccessTokenOptions.md#clockskew)
-- [[clockTolerance]](ValidateJWTAccessTokenOptions.md#clocktolerance)
-- [[customFetch]](ValidateJWTAccessTokenOptions.md#customfetch)
-- [headers](ValidateJWTAccessTokenOptions.md#headers)
-- [requireDPoP](ValidateJWTAccessTokenOptions.md#requiredpop)
-- [signal](ValidateJWTAccessTokenOptions.md#signal)
+***
 
 ## Properties
 
-### [clockSkew]
+### \[clockSkew\]?
 
-• `Optional` **[clockSkew]**: `number`
+• `optional` **\[clockSkew\]**: `number`
 
-Same functionality as in [Client](Client.md)
+See [clockSkew](../variables/clockSkew.md).
 
-___
+***
 
-### [clockTolerance]
+### \[clockTolerance\]?
 
-• `Optional` **[clockTolerance]**: `number`
+• `optional` **\[clockTolerance\]**: `number`
 
-Same functionality as in [Client](Client.md)
+See [clockTolerance](../variables/clockTolerance.md).
 
-___
+***
 
-### [customFetch]
+### \[customFetch\]()?
 
-• `Optional` **[customFetch]**: (`input`: `RequestInfo` \| [`URL`]( https://developer.mozilla.org/docs/Web/API/URL ), `init?`: `RequestInit`) => [`Promise`]( https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise )\<[`Response`]( https://developer.mozilla.org/docs/Web/API/Response )\>
+• `optional` **\[customFetch\]**: (`input`, `init`?) => [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
 
 See [customFetch](../variables/customFetch.md).
 
-___
+#### Parameters
 
-### headers
+| Parameter | Type |
+| ------ | ------ |
+| `input` | `RequestInfo` \| [`URL`](https://developer.mozilla.org/docs/Web/API/URL) |
+| `init`? | `RequestInit` |
 
-• `Optional` **headers**: [`Record`]( https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type )\<`string`, `string`\> \| [`string`, `string`][] \| [`Headers`]( https://developer.mozilla.org/docs/Web/API/Headers )
+#### Returns
 
-Headers to additionally send with the HTTP Request(s) triggered by this function's invocation.
+[`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<[`Response`](https://developer.mozilla.org/docs/Web/API/Response)\>
 
-___
+***
 
-### requireDPoP
+### \[jwksCache\]?
 
-• `Optional` **requireDPoP**: `boolean`
+• `optional` **\[jwksCache\]**: [`JWKSCacheInput`](../type-aliases/JWKSCacheInput.md)
+
+See [jwksCache](../variables/jwksCache.md).
+
+***
+
+### headers?
+
+• `optional` **headers**: [`Record`](https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type)\<`string`, `string`\> \| [`string`, `string`][] \| [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers)
+
+Headers to additionally send with the HTTP request(s) triggered by this function's invocation.
+
+***
+
+### requireDPoP?
+
+• `optional` **requireDPoP**: `boolean`
 
 Indicates whether DPoP use is required.
 
-___
+***
 
-### signal
+### signal?
 
-• `Optional` **signal**: [`AbortSignal`]( https://developer.mozilla.org/docs/Web/API/AbortSignal ) \| () => [`AbortSignal`]( https://developer.mozilla.org/docs/Web/API/AbortSignal )
+• `optional` **signal**: [`AbortSignal`](https://developer.mozilla.org/docs/Web/API/AbortSignal) \| () => [`AbortSignal`](https://developer.mozilla.org/docs/Web/API/AbortSignal)
 
-An AbortSignal instance, or a factory returning one, to abort the HTTP Request(s) triggered by
+An AbortSignal instance, or a factory returning one, to abort the HTTP request(s) triggered by
 this function's invocation.
 
-**`Example`**
+#### Example
 
 A 5000ms timeout AbortSignal for every request
 
 ```js
 const signal = () => AbortSignal.timeout(5_000) // Note: AbortSignal.timeout may not yet be available in all runtimes.
 ```
-
-## Hierarchy
-
-- [`HttpRequestOptions`](HttpRequestOptions.md)
-
-  ↳ **`ValidateJWTAccessTokenOptions`**

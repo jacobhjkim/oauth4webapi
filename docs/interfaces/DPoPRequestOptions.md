@@ -2,30 +2,14 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-## Table of contents
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
 
-### Properties
-
-- [DPoP](DPoPRequestOptions.md#dpop)
+***
 
 ## Properties
 
-### DPoP
+### DPoP?
 
-• `Optional` **DPoP**: [`DPoPOptions`](DPoPOptions.md)
+• `optional` **DPoP**: [`DPoPOptions`](DPoPOptions.md)
 
 DPoP-related options.
-
-## Hierarchy
-
-- **`DPoPRequestOptions`**
-
-  ↳ [`PushedAuthorizationRequestOptions`](PushedAuthorizationRequestOptions.md)
-
-  ↳ [`ProtectedResourceRequestOptions`](ProtectedResourceRequestOptions.md)
-
-  ↳ [`UserInfoRequestOptions`](UserInfoRequestOptions.md)
-
-  ↳ [`TokenEndpointRequestOptions`](TokenEndpointRequestOptions.md)
-
-  ↳ [`ClientCredentialsGrantRequestOptions`](ClientCredentialsGrantRequestOptions.md)

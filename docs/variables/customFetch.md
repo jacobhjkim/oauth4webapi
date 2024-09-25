@@ -2,35 +2,39 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-• `Const` **customFetch**: unique `symbol`
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
 
-When configured on an interface that extends [HttpRequestOptions](../interfaces/HttpRequestOptions.md), that's every `options`
-parameter for functions that trigger HTTP Requests, this replaces the use of global fetch. As a
-fetch replacement the arguments and expected return are the same as fetch.
+***
+
+• `const` **customFetch**: unique `symbol`
+
+When configured on an interface that extends [HttpRequestOptions](../interfaces/HttpRequestOptions.md), this applies to `options`
+parameter for functions that may trigger HTTP requests, this replaces the use of global fetch. As
+a fetch replacement the arguments and expected return are the same as fetch.
 
 In theory any module that claims to be compatible with the Fetch API can be used but your mileage
-may vary. No workarounds to allow use of non-conform Responses will be considered.
+may vary. No workarounds to allow use of non-conform [Response](https://developer.mozilla.org/docs/Web/API/Response)s will be considered.
 
-If you only need to update the Request properties you do not need to use a Fetch API
+If you only need to update the [Request](https://developer.mozilla.org/docs/Web/API/Request) properties you do not need to use a Fetch API
 module, just change what you need and pass it to globalThis.fetch just like this module would
 normally do.
 
 Its intended use cases are:
 
-- Request/Response tracing and logging
+- [Request](https://developer.mozilla.org/docs/Web/API/Request)/[Response](https://developer.mozilla.org/docs/Web/API/Response) tracing and logging
 - Custom caching strategies for responses of Authorization Server Metadata and JSON Web Key Set
   (JWKS) endpoints
-- Changing the Request properties like headers, body, credentials, mode before it is passed
+- Changing the [Request](https://developer.mozilla.org/docs/Web/API/Request) properties like headers, body, credentials, mode before it is passed
   to fetch
 
 Known caveats:
 
 - Expect Type-related issues when passing the inputs through to fetch-like modules, they hardly
   ever get their typings inline with actual fetch, you should `@ts-expect-error` them.
-- Returning self-constructed Response instances prohibits AS/RS-signalled DPoP Nonce
+- Returning self-constructed [Response](https://developer.mozilla.org/docs/Web/API/Response) instances prohibits AS/RS-signalled DPoP Nonce
   caching.
 
-**`Example`**
+## Examples
 
 Using [sindresorhus/ky](https://github.com/sindresorhus/ky) for retries and its hooks feature for
 logging outgoing requests and their responses.
@@ -64,8 +68,6 @@ await oauth.discoveryRequest(new URL('https://as.example.com'), {
     }),
 })
 ```
-
-**`Example`**
 
 Using [nodejs/undici](https://github.com/nodejs/undici) to mock responses in tests.
 

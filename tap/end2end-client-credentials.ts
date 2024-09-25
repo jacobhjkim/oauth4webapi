@@ -1,9 +1,17 @@
 import type QUnit from 'qunit'
 import * as jose from 'jose'
 
-import { isDpopNonceError, setup } from './helper.js'
+import {
+  assertNoWwwAuthenticateChallenges,
+  isDpopNonceError,
+  assertNotOAuth2Error,
+  setup,
+  unexpectedAuthorizationServerError,
+} from './helper.js'
 import * as lib from '../src/index.js'
 import { keys } from './keys.js'
+
+const coinflip = () => !Math.floor(Math.random() * 2)
 
 export default (QUnit: QUnit) => {
   const { module, test } = QUnit
@@ -12,49 +20,36 @@ export default (QUnit: QUnit) => {
   const alg = 'ES256'
 
   const authMethodOptions: lib.ClientAuthenticationMethod[] = [
-    'none',
-    'private_key_jwt',
     'client_secret_basic',
     'client_secret_post',
+    'private_key_jwt',
+    'none',
   ]
-  const dpopOptions = [false, true]
-  const jwtIntrospectionOptions = [false, true]
 
-  const cartesianMatrix = []
-
-  for (const authMethod of authMethodOptions) {
-    for (const dpop of dpopOptions) {
-      for (const jwtIntrospection of jwtIntrospectionOptions) {
-        cartesianMatrix.push({
-          authMethod,
-          dpop,
-          jwtIntrospection,
-        })
-      }
+  const options = (
+    authMethod: lib.ClientAuthenticationMethod,
+    ...flags: Array<'dpop' | 'jwtIntrospection' | 'encryption'>
+  ) => {
+    const conf = { authMethod, dpop: false, jwtIntrospection: false, encryption: false }
+    for (const flag of flags) {
+      conf[flag] = true
     }
+    return conf
   }
 
-  function trueCount(a: (boolean | string)[]) {
-    return a.reduce((c, x) => (x === true ? ++c : c), 0)
-  }
+  // - every auth method with all options off
+  // - dpop alone
+  // - jwtIntrospection alone
+  // - jwtIntrospection & encryption
+  const testCases = [
+    ...authMethodOptions.map((authMethod) => options(authMethod)),
+    options(authMethodOptions[0], 'dpop'),
+    options(authMethodOptions[0], 'jwtIntrospection'),
+    options(authMethodOptions[0], 'jwtIntrospection', 'encryption'),
+  ]
 
-  for (const config of cartesianMatrix) {
-    const { authMethod, dpop, jwtIntrospection } = config
-    const options = [authMethod, dpop, jwtIntrospection]
-
-    // Test
-    // - every auth method with all options off
-    // - individual options
-    switch (trueCount(options)) {
-      case 0:
-        break
-      case 1:
-        if (authMethod === 'client_secret_basic') {
-          break
-        }
-      default:
-        continue
-    }
+  for (const config of testCases) {
+    const { authMethod, dpop, jwtIntrospection, encryption } = config
 
     function label(config: Record<string, string | boolean>) {
       const keys = Object.keys(
@@ -74,8 +69,10 @@ export default (QUnit: QUnit) => {
         false,
         false,
         jwtIntrospection,
+        ['client_credentials'],
+        encryption,
       )
-      const DPoP = dpop ? await lib.generateKeyPair(<lib.JWSAlgorithm>alg) : undefined
+      const DPoP = dpop ? await lib.generateKeyPair(alg as lib.JWSAlgorithm) : undefined
 
       const authenticated: lib.AuthenticatedRequestOptions = {
         clientPrivateKey: authMethod === 'private_key_jwt' ? clientPrivateKey : undefined,
@@ -91,17 +88,26 @@ export default (QUnit: QUnit) => {
       params.set('scope', 'api:write')
 
       {
-        const clientCredentialsGrantRequest = () =>
-          lib.clientCredentialsGrantRequest(as, client, params, {
-            DPoP,
-            ...authenticated,
-          })
+        let clientCredentialsGrantRequest: () => ReturnType<
+          typeof lib.clientCredentialsGrantRequest
+        >
+
+        if (coinflip()) {
+          clientCredentialsGrantRequest = () =>
+            lib.clientCredentialsGrantRequest(as, client, params, {
+              DPoP,
+              ...authenticated,
+            })
+        } else {
+          clientCredentialsGrantRequest = () =>
+            lib.genericTokenEndpointRequest(as, client, 'client_credentials', params, {
+              DPoP,
+              ...authenticated,
+            })
+        }
         let response = await clientCredentialsGrantRequest()
 
-        if (lib.parseWwwAuthenticateChallenges(response)) {
-          t.ok(0)
-          throw new Error()
-        }
+        assertNoWwwAuthenticateChallenges(response)
 
         const processClientCredentialsResponse = () =>
           lib.processClientCredentialsResponse(as, client, response)
@@ -110,13 +116,9 @@ export default (QUnit: QUnit) => {
           if (isDpopNonceError(result)) {
             response = await clientCredentialsGrantRequest()
             result = await processClientCredentialsResponse()
-            if (lib.isOAuth2Error(result)) {
-              t.ok(0)
-              throw new Error()
-            }
+            if (!assertNotOAuth2Error(result)) return
           } else {
-            t.ok(0)
-            throw new Error()
+            throw unexpectedAuthorizationServerError(result)
           }
         }
 
@@ -124,25 +126,38 @@ export default (QUnit: QUnit) => {
         t.equal(token_type, dpop ? 'dpop' : 'bearer')
 
         {
-          let response = await lib.introspectionRequest(as, client, access_token, authenticated)
+          let response = await lib.introspectionRequest(as, client, access_token, {
+            clientPrivateKey: authenticated.clientPrivateKey
+              ? {
+                  ...clientPrivateKey,
+                  [lib.modifyAssertion](h, p) {
+                    t.equal(h.alg, 'ES256')
+                    p.foo = 'bar'
+                  },
+                }
+              : undefined,
+            async [lib.customFetch](...params: Parameters<typeof fetch>) {
+              if (authMethod === 'private_key_jwt') {
+                if (params[1]?.body instanceof URLSearchParams) {
+                  t.propContains(await jose.decodeJwt(params[1].body.get('client_assertion')!), {
+                    foo: 'bar',
+                  })
+                } else {
+                  throw new Error()
+                }
+              }
+              return fetch(...params)
+            },
+          })
 
-          const clone = await response.clone().text()
-          if (jwtIntrospection) {
-            t.ok(jose.decodeJwt(clone))
-          } else {
-            t.ok(JSON.parse(clone))
-          }
-
-          if (lib.parseWwwAuthenticateChallenges(response)) {
-            t.ok(0)
-            throw new Error()
-          }
+          assertNoWwwAuthenticateChallenges(response)
 
           const result = await lib.processIntrospectionResponse(as, client, response)
 
-          if (lib.isOAuth2Error(result)) {
-            t.ok(0)
-            throw new Error()
+          if (!assertNotOAuth2Error(result)) return
+
+          if (jwtIntrospection) {
+            await lib.validateJwtIntrospectionSignature(as, response)
           }
 
           t.propContains(result, {
@@ -156,16 +171,10 @@ export default (QUnit: QUnit) => {
         {
           let response = await lib.revocationRequest(as, client, access_token, authenticated)
 
-          if (lib.parseWwwAuthenticateChallenges(response)) {
-            t.ok(0)
-            throw new Error()
-          }
+          assertNoWwwAuthenticateChallenges(response)
 
           const result = await lib.processRevocationResponse(response)
-          if (lib.isOAuth2Error(result)) {
-            t.ok(0)
-            throw new Error()
-          }
+          if (!assertNotOAuth2Error(result)) return
         }
       }
 

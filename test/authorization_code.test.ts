@@ -61,7 +61,7 @@ test('authorizationCodeGrantRequest()', async (t) => {
   )
 
   await t.throwsAsync(
-    lib.authorizationCodeGrantRequest(issuer, tClient, <any>null, 'redirect_uri', 'verifier'),
+    lib.authorizationCodeGrantRequest(issuer, tClient, null as any, 'redirect_uri', 'verifier'),
     {
       message:
         '"callbackParameters" must be an instance of URLSearchParams obtained from "validateAuthResponse()", or "validateJwtAuthResponse()',
@@ -73,7 +73,7 @@ test('authorizationCodeGrantRequest()', async (t) => {
       issuer,
       tClient,
       cb('code=authorization_code'),
-      <any>null,
+      null as any,
       'verifier',
     ),
     {
@@ -87,7 +87,7 @@ test('authorizationCodeGrantRequest()', async (t) => {
       tClient,
       cb('code=authorization_code'),
       'redirect_uri',
-      <any>null,
+      null as any,
     ),
     {
       message: '"codeVerifier" must be a non-empty string',
@@ -268,7 +268,7 @@ test('authorizationCodeGrantRequest() w/ DPoP', async (t) => {
 })
 
 test('processAuthorizationCodeOAuth2Response()', async (t) => {
-  await t.throwsAsync(lib.processAuthorizationCodeOAuth2Response(issuer, client, <any>null), {
+  await t.throwsAsync(lib.processAuthorizationCodeOAuth2Response(issuer, client, null as any), {
     message: '"response" must be an instance of Response',
   })
   await t.throwsAsync(
@@ -796,7 +796,7 @@ test('processAuthorizationCodeOpenIDResponse() nonce checks', async (t) => {
               .sign(t.context.RS256.privateKey),
           }),
         ),
-        <any>nonce,
+        nonce as any,
       ),
       { message: '"expectedNonce" must be a non-empty string', name: 'TypeError' },
     )
@@ -828,32 +828,29 @@ test('processAuthorizationCodeOpenIDResponse() nonce checks', async (t) => {
 test('processAuthorizationCodeOpenIDResponse() auth_time checks', async (t) => {
   const tIssuer: lib.AuthorizationServer = { ...issuer, jwks_uri: endpoint('jwks') }
 
-  await t.throwsAsync(
-    lib.processAuthorizationCodeOpenIDResponse(
-      tIssuer,
-      {
-        ...client,
-        require_auth_time: true,
-      },
-      getResponse(
-        JSON.stringify({
-          access_token: 'token',
-          token_type: 'Bearer',
-          id_token: await new jose.SignJWT({
-            auth_time: '0',
-          })
-            .setProtectedHeader({ alg: 'RS256' })
-            .setIssuer(issuer.issuer)
-            .setSubject('urn:example:subject')
-            .setAudience(client.client_id)
-            .setExpirationTime('5m')
-            .setIssuedAt()
-            .sign(t.context.RS256.privateKey),
-        }),
+  for (const auth_time of [0, -1, null, '1', [], {}, true]) {
+    await t.throwsAsync(
+      lib.processAuthorizationCodeOpenIDResponse(
+        tIssuer,
+        client,
+        getResponse(
+          JSON.stringify({
+            access_token: 'token',
+            token_type: 'Bearer',
+            id_token: await new jose.SignJWT({ auth_time })
+              .setProtectedHeader({ alg: 'RS256' })
+              .setIssuer(issuer.issuer)
+              .setSubject('urn:example:subject')
+              .setAudience(client.client_id)
+              .setExpirationTime('5m')
+              .setIssuedAt()
+              .sign(t.context.RS256.privateKey),
+          }),
+        ),
       ),
-    ),
-    { message: 'unexpected ID Token "auth_time" (authentication time) claim value' },
-  )
+      { message: 'ID Token "auth_time" (authentication time) must be a positive number' },
+    )
+  }
 })
 
 test('processAuthorizationCodeOpenIDResponse() azp checks', async (t) => {
@@ -868,6 +865,28 @@ test('processAuthorizationCodeOpenIDResponse() azp checks', async (t) => {
           access_token: 'token',
           token_type: 'Bearer',
           id_token: await new jose.SignJWT({})
+            .setProtectedHeader({ alg: 'RS256' })
+            .setIssuer(issuer.issuer)
+            .setSubject('urn:example:subject')
+            .setAudience([client.client_id, 'other-aud'])
+            .setExpirationTime('5m')
+            .setIssuedAt()
+            .sign(t.context.RS256.privateKey),
+        }),
+      ),
+    ),
+    { message: 'ID Token "aud" (audience) claim includes additional untrusted audiences' },
+  )
+
+  await t.throwsAsync(
+    lib.processAuthorizationCodeOpenIDResponse(
+      tIssuer,
+      client,
+      getResponse(
+        JSON.stringify({
+          access_token: 'token',
+          token_type: 'Bearer',
+          id_token: await new jose.SignJWT({ azp: 'not-my-client_id' })
             .setProtectedHeader({ alg: 'RS256' })
             .setIssuer(issuer.issuer)
             .setSubject('urn:example:subject')

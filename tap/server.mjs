@@ -26,6 +26,7 @@ const provider = new Provider('http://localhost:3000', {
       requireNonce: () => true,
     },
     introspection: { enabled: true },
+    encryption: { enabled: true },
     revocation: { enabled: true },
     clientCredentials: { enabled: true },
     registration: { enabled: true },
@@ -67,6 +68,16 @@ const provider = new Provider('http://localhost:3000', {
   ],
 })
 
+const { invalidate: orig } = provider.Client.Schema.prototype
+
+provider.Client.Schema.prototype.invalidate = function invalidate(message, code) {
+  if (code === 'implicit-force-https' || code === 'implicit-forbid-localhost') {
+    return
+  }
+
+  orig.call(this, message)
+}
+
 const cors = koaCors()
 provider.use((ctx, next) => {
   if (ctx.URL.pathname === '/drive' || ctx.URL.pathname === '/reg') {
@@ -85,6 +96,10 @@ provider.use(async (ctx, next) => {
         encoding: ctx.charset,
       })
       const params = new URLSearchParams(body.toString())
+      const target = params.get('goto')
+
+      console.log('\n\n=====')
+      console.log('starting user interaction on', target)
 
       browser = await puppeteer.launch({
         executablePath: getChromePath(),
@@ -95,21 +110,56 @@ provider.use(async (ctx, next) => {
 
       const page = await browser.newPage()
       await Promise.all([
-        page.goto(params.get('goto')),
+        page.goto(target),
         page.waitForSelector(s),
-        page.waitForNetworkIdle(),
+        page.waitForNetworkIdle({ idleTime: 100 }),
       ])
 
-      if ((await page.title()) === 'Device Login Confirmation') {
-        await Promise.all([page.click(s), page.waitForSelector(s), page.waitForNetworkIdle()])
+      let pending = true
+      let deviceFlow
+      let destination
+      while (pending) {
+        let title
+        try {
+          title = await page.title()
+        } catch {
+          continue
+        }
+        switch (title) {
+          case 'Device Login Confirmation':
+            deviceFlow = true
+            await Promise.all([
+              page.click(s),
+              page.waitForFunction('document.title === "Sign-in"'),
+              page.waitForNetworkIdle({ idleTime: 100 }),
+            ])
+            break
+          case 'Sign-in':
+            await page.type('[name="login"]', 'user')
+            await page.type('[name="password"]', 'pass')
+            await Promise.all([
+              page.click(s),
+              page.waitForFunction('document.title === "Consent"'),
+              page.waitForNetworkIdle({ idleTime: 100 }),
+            ])
+            break
+          case 'Consent':
+            await Promise.all([page.click(s), page.waitForNetworkIdle({ idleTime: 100 })])
+            pending = false
+            destination = deviceFlow ? '/device/' : '/cb'
+            break
+          default:
+            throw new Error(title)
+        }
       }
 
-      await page.type('[name="login"]', 'user')
-      await page.type('[name="password"]', 'pass')
-      await Promise.all([page.click(s), page.waitForSelector(s), page.waitForNetworkIdle()])
-      await Promise.all([page.click(s), page.waitForNetworkIdle(s)])
+      while (page.url().includes(destination) === false) {
+        await page.waitForNetworkIdle({ idleTime: 100 })
+      }
 
       ctx.body = page.url()
+      console.log('done on title:', await page.title(), 'url:', ctx.body)
+      console.log('=====\n\n')
     } finally {
       await browser?.close()
     }
@@ -117,6 +167,9 @@ provider.use(async (ctx, next) => {
     ctx.body = ctx.URL.href
   } else {
     await next()
+    if (typeof ctx.body === 'string' && ctx.body.includes('Continue')) {
+      ctx.body = ctx.body.replace('<title>Sign-in</title>', '<title>Consent</title>')
+    }
   }
 })
 

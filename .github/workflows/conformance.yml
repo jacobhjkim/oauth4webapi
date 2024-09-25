@@ -59,6 +59,9 @@ jobs:
 
           # FAPI 2.0 Message Signing ID1
           - plan: fapi2-message-signing-id1-client-test-plan
+          - plan: fapi2-message-signing-id1-client-test-plan
+            variant:
+              fapi_client_type: 'plain_oauth'
 
     steps:
       - name: Checkout
@@ -73,7 +76,7 @@ jobs:
       - name: Run Conformance Suite
         working-directory: ./conformance-suite
         run: |
-          docker-compose -f docker-compose-dev.yml up -d
+          docker compose -f docker-compose-dev.yml up -d
           while ! curl -skfail https://localhost.emobix.co.uk:8443/api/runner/available >/dev/null; do sleep 2; done
       - name: Setup node
         uses: actions/setup-node@v4

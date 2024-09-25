@@ -1,4 +1,4 @@
-# OAuth 2 / OpenID Connect for JavaScript Runtimes
+# Low-Level OAuth 2 / OpenID Connect Client API for JavaScript Runtimes
 
 > **Fork of [panva/oauth4webapi](https://github.com/panva/oauth4webapi) with modification in the way of handling `expires_in` field.**
 
@@ -23,9 +23,11 @@ The following features are currently in scope and implemented in this software:
 
 [<img width="96" height="50" align="right" src="https://user-images.githubusercontent.com/241506/166977513-7cd710a9-7f60-4944-aebe-a658e9f36375.png" alt="OpenID Certification">](#certification)
 
-[Filip Skokan](https://github.com/panva) has certified that [this software](https://github.com/panva/oauth4webapi) conforms to the Basic, FAPI 1.0 Advanced, FAPI 2.0 Security Profile, and FAPI 2.0 Message Signing Relying Party Conformance Profiles of the OpenID Connect™ protocol.
+[Filip Skokan](https://github.com/panva) has [certified](https://openid.net/certification) that [this software](https://github.com/panva/oauth4webapi) conforms to the Basic, FAPI 1.0, and FAPI 2.0 Relying Party Conformance Profiles of the OpenID Connect™ protocol.
 
 ## [💗 Help the project](https://github.com/sponsors/panva)
+
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
 
 ## Dependencies: 0
 
@@ -33,20 +35,14 @@ The following features are currently in scope and implemented in this software:
 
 ## [API Reference](docs/README.md)
 
-`oauth4webapi` is distributed via [npmjs.com](https://www.npmjs.com/package/oauth4webapi), [deno.land/x](https://deno.land/x/oauth4webapi), [cdnjs.com](https://cdnjs.com/libraries/oauth4webapi), [jsdelivr.com](https://www.jsdelivr.com/package/npm/oauth4webapi), and [github.com](https://github.com/panva/oauth4webapi).
+`oauth4webapi` is distributed via [npmjs.com](https://www.npmjs.com/package/oauth4webapi), [jsr.io](https://jsr.io/@panva/oauth4webapi), [deno.land/x](https://deno.land/x/oauth4webapi), [cdnjs.com](https://cdnjs.com/libraries/oauth4webapi), [jsdelivr.com](https://www.jsdelivr.com/package/npm/oauth4webapi), and [github.com](https://github.com/panva/oauth4webapi).
 
 ## [Examples](examples/README.md)
 
 **`example`** ESM import
 
 ```js
-import * as oauth2 from 'oauth4webapi'
-```
-
-**`example`** Deno import
-
-```js
-import * as oauth2 from 'https://deno.land/x/oauth4webapi@v2.10.4/mod.ts'
+import * as oauth from 'oauth4webapi'
 ```
 
 - Authorization Code Flow (OAuth 2.0) - [source](examples/oauth.ts)
@@ -66,8 +62,9 @@ import * as oauth2 from 'https://deno.land/x/oauth4webapi@v2.10.4/mod.ts'
   - Device Authorization Grant - [source](examples/device_authorization_grant.ts)
   - Refresh Token Grant - [source](examples/refresh_token.ts) | [diff](examples/refresh_token.diff)
 - FAPI
-  - FAPI 1.0 Advanced (Private Key JWT, MTLS, JAR) - [source](examples/fapi1-advanced.ts) | [diff](examples/fapi1-advanced.diff)
-  - FAPI 2.0 Security Profile (Private Key JWT, PAR, DPoP) - [source](examples/fapi2.ts) | [diff](examples/fapi2.diff)
+  - FAPI 1.0 Advanced - [source](examples/fapi1-advanced.ts) | [diff](examples/fapi1-advanced.diff)
+  - FAPI 2.0 Security Profile - [source](examples/fapi2.ts) | [diff](examples/fapi2.diff)
+  - FAPI 2.0 Message Signing - [source](examples/fapi2-message-signing.ts) | [diff](examples/fapi2-message-signing.diff)
 
 
 ## Supported Runtimes

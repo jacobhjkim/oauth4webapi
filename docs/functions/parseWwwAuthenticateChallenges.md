@@ -1,18 +1,22 @@
-# Function: parseWwwAuthenticateChallenges
+# Function: parseWwwAuthenticateChallenges()
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
 ▸ **parseWwwAuthenticateChallenges**(`response`): [`WWWAuthenticateChallenge`](../interfaces/WWWAuthenticateChallenge.md)[] \| `undefined`
 
-Parses the `WWW-Authenticate` HTTP Header from a Response instance.
+Parses the `WWW-Authenticate` HTTP Header from a [Response](https://developer.mozilla.org/docs/Web/API/Response) instance.
 
-#### Parameters
+## Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `response` | [`Response`]( https://developer.mozilla.org/docs/Web/API/Response ) |
+| Parameter | Type |
+| ------ | ------ |
+| `response` | [`Response`](https://developer.mozilla.org/docs/Web/API/Response) |
 
-#### Returns
+## Returns
 
 [`WWWAuthenticateChallenge`](../interfaces/WWWAuthenticateChallenge.md)[] \| `undefined`
 

@@ -2,25 +2,22 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
 ## Indexable
 
-▪ [claim: `string`]: [`JsonValue`](../types/JsonValue.md) \| `undefined`
-
-## Table of contents
-
-### Properties
-
-- [jkt](ConfirmationClaims.md#jkt)
-- [x5t#S256](ConfirmationClaims.md#x5t#s256)
+ \[`claim`: `string`\]: [`JsonValue`](../type-aliases/JsonValue.md) \| `undefined`
 
 ## Properties
 
-### jkt
+### jkt?
 
-• `Optional` `Readonly` **jkt**: `string`
+• `readonly` `optional` **jkt**: `string`
 
-___
+***
 
-### x5t#S256
+### x5t#S256?
 
-• `Optional` `Readonly` **x5t#S256**: `string`
+• `readonly` `optional` **x5t#S256**: `string`

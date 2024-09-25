@@ -1,8 +1,12 @@
-# Type alias: ClientAuthenticationMethod
+# Type Alias: ClientAuthenticationMethod
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
-Ƭ **ClientAuthenticationMethod**: ``"client_secret_basic"`` \| ``"client_secret_post"`` \| ``"private_key_jwt"`` \| ``"none"``
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
+• **ClientAuthenticationMethod**: `"client_secret_basic"` \| `"client_secret_post"` \| `"private_key_jwt"` \| `"none"`
 
 Supported Client Authentication Methods.
 
@@ -19,7 +23,7 @@ Supported Client Authentication Methods.
 - **`none`** (public client) uses the HTTP request body to send only
   [`client_id`](../interfaces/Client.md#client_id) as `application/x-www-form-urlencoded` body parameter.
 
-**`See`**
+## See
 
  - [RFC 6749 - The OAuth 2.0 Authorization Framework](https://www.rfc-editor.org/rfc/rfc6749.html#section-2.3)
  - [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication)

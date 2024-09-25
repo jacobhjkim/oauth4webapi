@@ -2,7 +2,7 @@ let USER_AGENT: string
 // @ts-ignore
 if (typeof navigator === 'undefined' || !navigator.userAgent?.startsWith?.('Mozilla/5.0 ')) {
   const NAME = 'oauth4webapi'
-  const VERSION = 'v2.10.4'
+  const VERSION = 'v2.17.0'
   USER_AGENT = `${NAME}/${VERSION}`
 }
 
@@ -40,6 +40,19 @@ function looseInstanceOf<T extends {}>(input: unknown, expected: Constructor<T>)
   }
 }
 
+export interface ModifyAssertionFunction {
+  (
+    /**
+     * JWS Header to modify right before it is signed.
+     */
+    header: Record<string, JsonValue | undefined>,
+    /**
+     * JWT Claims Set to modify right before it is signed.
+     */
+    payload: Record<string, JsonValue | undefined>,
+  ): void
+}
+
 /**
  * Interface to pass an asymmetric private key and, optionally, its associated JWK Key ID to be
  * added as a `kid` JOSE Header Parameter.
@@ -57,6 +70,13 @@ export interface PrivateKey {
    * ID) will be added to the JOSE Header.
    */
   kid?: string
+
+  /**
+   * Use to modify the JWT signed by this key right before it is signed.
+   *
+   * @see {@link modifyAssertion}
+   */
+  [modifyAssertion]?: ModifyAssertionFunction
 }
 
 /**
@@ -90,7 +110,7 @@ export type ClientAuthenticationMethod =
  *
  * @example
  *
- * CryptoKey algorithm for the `PS256`, `PS384`, or `PS512` JWS Algorithm Identifiers
+ * {@link !CryptoKey.algorithm} for the `PS256`, `PS384`, or `PS512` JWS Algorithm Identifiers
  *
  * ```ts
  * interface PS256 extends RsaHashedKeyAlgorithm {
@@ -111,7 +131,7 @@ export type ClientAuthenticationMethod =
  *
  * @example
  *
- * CryptoKey algorithm for the `ES256`, `ES384`, or `ES512` JWS Algorithm Identifiers
+ * {@link !CryptoKey.algorithm} for the `ES256`, `ES384`, or `ES512` JWS Algorithm Identifiers
  *
  * ```ts
  * interface ES256 extends EcKeyAlgorithm {
@@ -132,7 +152,7 @@ export type ClientAuthenticationMethod =
  *
  * @example
  *
- * CryptoKey algorithm for the `RS256`, `RS384`, or `RS512` JWS Algorithm Identifiers
+ * {@link !CryptoKey.algorithm} for the `RS256`, `RS384`, or `RS512` JWS Algorithm Identifiers
  *
  * ```ts
  * interface RS256 extends RsaHashedKeyAlgorithm {
@@ -153,7 +173,7 @@ export type ClientAuthenticationMethod =
  *
  * @example
  *
- * CryptoKey algorithm for the `EdDSA` JWS Algorithm Identifier (Experimental)
+ * {@link !CryptoKey.algorithm} for the `EdDSA` JWS Algorithm Identifier (Experimental)
  *
  * Runtime support for this algorithm is limited, it depends on the [Secure Curves in the Web
  * Cryptography API](https://wicg.github.io/webcrypto-secure-curves/) proposal which is yet to be
@@ -179,7 +199,7 @@ export type JWSAlgorithm =
   | 'PS512'
   | 'RS512'
 
-interface JWK {
+export interface JWK {
   readonly kty?: string
   readonly kid?: string
   readonly alg?: string
@@ -194,34 +214,79 @@ interface JWK {
   readonly [parameter: string]: JsonValue | undefined
 }
 
+/**
+ * Use to adjust the assumed current time. Positive and negative finite values representing seconds
+ * are allowed. Default is `0` (Date.now() + 0 seconds is used).
+ *
+ * @example
+ *
+ * When the local clock is mistakenly 1 hour in the past
+ *
+ * ```ts
+ * const client: oauth.Client = {
+ *   client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
+ *   // ... other metadata
+ *   [oauth.clockSkew]: +(60 * 60),
+ * }
+ * ```
+ *
+ * @example
+ *
+ * When the local clock is mistakenly 1 hour in the future
+ *
+ * ```ts
+ * const client: oauth.Client = {
+ *   client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
+ *   // ... other metadata
+ *   [oauth.clockSkew]: -(60 * 60),
+ * }
+ * ```
+ */
 export const clockSkew: unique symbol = Symbol()
+
+/**
+ * Use to set allowed clock tolerance when checking DateTime JWT Claims. Only positive finite values
+ * representing seconds are allowed. Default is `30` (30 seconds).
+ *
+ * @example
+ *
+ * Tolerate 30 seconds clock skew when validating JWT claims like exp or nbf.
+ *
+ * ```ts
+ * const client: oauth.Client = {
+ *   client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
+ *   // ... other metadata
+ *   [oauth.clockTolerance]: 30,
+ * }
+ * ```
+ */
 export const clockTolerance: unique symbol = Symbol()
 
 /**
- * When configured on an interface that extends {@link HttpRequestOptions}, that's every `options`
- * parameter for functions that trigger HTTP Requests, this replaces the use of global fetch. As a
- * fetch replacement the arguments and expected return are the same as fetch.
+ * When configured on an interface that extends {@link HttpRequestOptions}, this applies to `options`
+ * parameter for functions that may trigger HTTP requests, this replaces the use of global fetch. As
+ * a fetch replacement the arguments and expected return are the same as fetch.
  *
  * In theory any module that claims to be compatible with the Fetch API can be used but your mileage
- * may vary. No workarounds to allow use of non-conform {@link Response}s will be considered.
+ * may vary. No workarounds to allow use of non-conform {@link !Response}s will be considered.
  *
- * If you only need to update the {@link Request} properties you do not need to use a Fetch API
+ * If you only need to update the {@link !Request} properties you do not need to use a Fetch API
  * module, just change what you need and pass it to globalThis.fetch just like this module would
  * normally do.
  *
  * Its intended use cases are:
  *
- * - {@link Request}/{@link Response} tracing and logging
+ * - {@link !Request}/{@link !Response} tracing and logging
  * - Custom caching strategies for responses of Authorization Server Metadata and JSON Web Key Set
  *   (JWKS) endpoints
- * - Changing the {@link Request} properties like headers, body, credentials, mode before it is passed
+ * - Changing the {@link !Request} properties like headers, body, credentials, mode before it is passed
  *   to fetch
  *
  * Known caveats:
  *
  * - Expect Type-related issues when passing the inputs through to fetch-like modules, they hardly
  *   ever get their typings inline with actual fetch, you should `@ts-expect-error` them.
- * - Returning self-constructed {@link Response} instances prohibits AS/RS-signalled DPoP Nonce
+ * - Returning self-constructed {@link !Response} instances prohibits AS/RS-signalled DPoP Nonce
  *   caching.
  *
  * @example
@@ -283,66 +348,160 @@ export const clockTolerance: unique symbol = Symbol()
 export const customFetch: unique symbol = Symbol()
 
 /**
- * When combined with {@link customFetch} (to use a Fetch API implementation that supports client
- * certificates) this can be used to target FAPI 2.0 profiles that utilize Mutual-TLS for either
- * client authentication or sender constraining. FAPI 1.0 Advanced profiles that use PAR and JARM
- * can also be targetted.
- *
- * When configured on an interface that extends {@link UseMTLSAliasOptions} this makes the client
- * prioritize an endpoint URL present in
- * {@link AuthorizationServer.mtls_endpoint_aliases `as.mtls_endpoint_aliases`}.
+ * Use to mutate JWT header and payload before they are signed. Its intended use is working around
+ * non-conform server behaviours, such as modifying JWT "aud" (audience) claims, or otherwise
+ * changing fixed claims used by this library.
  *
  * @example
  *
- * (Node.js) Using [nodejs/undici](https://github.com/nodejs/undici) for Mutual-TLS Client
- * Authentication and Certificate-Bound Access Tokens support.
+ * Changing Private Key JWT client assertion audience issued from an array to a string
  *
- * ```js
- * import * as undici from 'undici'
+ * ```ts
  * import * as oauth from 'oauth4webapi'
  *
- * const response = await oauth.pushedAuthorizationRequest(as, client, params, {
- *   [oauth.useMtlsAlias]: true,
- *   [oauth.customFetch]: (...args) => {
- *     return undici.fetch(args[0], {
- *       ...args[1],
- *       dispatcher: new undici.Agent({
- *         connect: {
- *           key: clientKey,
- *           cert: clientCertificate,
- *         },
- *       }),
- *     })
+ * // Prerequisites
+ * let as!: oauth.AuthorizationServer
+ * let client!: oauth.Client
+ * let parameters!: URLSearchParams
+ * let clientPrivateKey!: CryptoKey
+ *
+ * const response = await oauth.pushedAuthorizationRequest(as, client, parameters, {
+ *   clientPrivateKey: {
+ *     key: clientPrivateKey,
+ *     [oauth.modifyAssertion](header, payload) {
+ *       payload.aud = as.issuer
+ *     },
  *   },
  * })
  * ```
  *
  * @example
  *
- * (Deno) Using Deno.createHttpClient API for Mutual-TLS Client Authentication and Certificate-Bound
- * Access Tokens support. This is currently (Jan 2023) locked behind the --unstable command line
- * flag.
+ * Changing Request Object issued by {@link issueRequestObject} to have an expiration of 5 minutes
  *
- * ```js
+ * ```ts
  * import * as oauth from 'oauth4webapi'
  *
- * const agent = Deno.createHttpClient({
- *   certChain: clientCertificate,
- *   privateKey: clientKey,
- * })
+ * // Prerequisites
+ * let as!: oauth.AuthorizationServer
+ * let client!: oauth.Client
+ * let parameters!: URLSearchParams
+ * let jarPrivateKey!: CryptoKey
  *
- * const response = await oauth.pushedAuthorizationRequest(as, client, params, {
- *   [oauth.useMtlsAlias]: true,
- *   [oauth.customFetch]: (...args) => {
- *     return fetch(args[0], {
- *       ...args[1],
- *       client: agent,
- *     })
+ * const request = await oauth.issueRequestObject(as, client, parameters, {
+ *   key: jarPrivateKey,
+ *   [oauth.modifyAssertion](header, payload) {
+ *     payload.exp = <number>payload.iat + 300
  *   },
  * })
  * ```
+ */
+export const modifyAssertion: unique symbol = Symbol()
+
+/**
+ * Use to add support for decrypting JWEs the client encounters, namely
  *
- * @see [RFC 8705 - OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens](https://www.rfc-editor.org/rfc/rfc8705.html)
+ * - Encrypted ID Tokens returned by the Token Endpoint
+ * - Encrypted ID Tokens returned as part of FAPI 1.0 Advanced Detached Signature authorization
+ *   responses
+ * - Encrypted JWT UserInfo responses
+ * - Encrypted JWT Introspection responses
+ * - Encrypted JARM Responses
+ *
+ * @example
+ *
+ * Decrypting JARM responses
+ *
+ * ```ts
+ * import * as oauth from 'oauth4webapi'
+ * import * as jose from 'jose'
+ *
+ * // Prerequisites
+ * let as!: oauth.AuthorizationServer
+ * let key!: CryptoKey
+ * let alg!: string
+ * let enc!: string
+ *
+ * const decoder = new TextDecoder()
+ *
+ * const client: oauth.Client = {
+ *   client_id: 'urn:example:client_id',
+ *   async [oauth.jweDecrypt](jwe) {
+ *     const { plaintext } = await compactDecrypt(jwe, key, {
+ *       keyManagementAlgorithms: [alg],
+ *       contentEncryptionAlgorithms: [enc],
+ *     }).catch((cause) => {
+ *       throw new oauth.OperationProcessingError('decryption failed', { cause })
+ *     })
+ *
+ *     return decoder.decode(plaintext)
+ *   },
+ * }
+ *
+ * const params = await oauth.validateJwtAuthResponse(as, client, currentUrl)
+ * ```
+ */
+export const jweDecrypt: unique symbol = Symbol()
+
+/**
+ * DANGER ZONE - This option has security implications that must be understood, assessed for
+ * applicability, and accepted before use. It is critical that the JSON Web Key Set cache only be
+ * writable by your own code.
+ *
+ * This option is intended for cloud computing runtimes that cannot keep an in memory cache between
+ * their code's invocations. Use in runtimes where an in memory cache between requests is available
+ * is not desirable.
+ *
+ * When configured on an interface that extends {@link JWKSCacheOptions}, this applies to `options`
+ * parameter for functions that may trigger HTTP requests to
+ * {@link AuthorizationServer.jwks_uri `as.jwks_uri`}, this allows the passed in object to:
+ *
+ * - Serve as an initial value for the JSON Web Key Set that the module would otherwise need to
+ *   trigger an HTTP request for
+ * - Have the JSON Web Key Set the function optionally ended up triggering an HTTP request for
+ *   assigned to it as properties
+ *
+ * The intended use pattern is:
+ *
+ * - Before executing a function with {@link JWKSCacheOptions} in its `options` parameter you pull the
+ *   previously cached object from a low-latency key-value store offered by the cloud computing
+ *   runtime it is executed on;
+ * - Default to an empty object `{}` instead when there's no previously cached value;
+ * - Pass it into the options interfaces that extend {@link JWKSCacheOptions};
+ * - Afterwards, update the key-value storage if the {@link ExportedJWKSCache.uat `uat`} property of
+ *   the object has changed.
+ *
+ * @example
+ *
+ * ```ts
+ * import * as oauth from 'oauth4webapi'
+ *
+ * // Prerequisites
+ * let as!: oauth.AuthorizationServer
+ * let request!: Request
+ * let expectedAudience!: string
+ *
+ * // Load JSON Web Key Set cache
+ * const jwksCache: oauth.JWKSCacheInput = (await getPreviouslyCachedJWKS()) || {}
+ * const { uat } = jwksCache
+ *
+ * // Use JSON Web Key Set cache
+ * const accessTokenClaims = await validateJwtAccessToken(as, request, expectedAudience, {
+ *   [oauth.jwksCache]: jwksCache,
+ * })
+ *
+ * if (uat !== jwksCache.uat) {
+ *   // Update JSON Web Key Set cache
+ *   await storeNewJWKScache(jwksCache)
+ * }
+ * ```
+ */
+export const jwksCache: unique symbol = Symbol()
+
+/**
+ * @ignore
+ *
+ * @deprecated Use {@link Client.use_mtls_endpoint_aliases `client.use_mtls_endpoint_aliases`}.
  */
 export const useMtlsAlias: unique symbol = Symbol()
 
@@ -695,6 +854,7 @@ export interface Client {
    * Client secret.
    */
   client_secret?: string
+  // TODO: Make client_secret_post the default in v3.x
   /**
    * Client {@link ClientAuthenticationMethod authentication method} for the client's authenticated
    * requests. Default is `client_secret_basic`.
@@ -739,52 +899,78 @@ export interface Client {
   default_max_age?: number
 
   /**
-   * Use to adjust the client's assumed current time. Positive and negative finite values
-   * representing seconds are allowed. Default is `0` (Date.now() + 0 seconds is used).
+   * Indicates the requirement for a client to use mutual TLS endpoint aliases defined by the AS
+   * where present. Default is `false`.
+   *
+   * When combined with {@link customFetch} (to use a Fetch API implementation that supports client
+   * certificates) this can be used to target FAPI 2.0 profiles that utilize Mutual-TLS for either
+   * client authentication or sender constraining. FAPI 1.0 Advanced profiles that use PAR and JARM
+   * can also be targetted.
    *
    * @example
    *
-   * When the client's local clock is mistakenly 1 hour in the past
+   * (Node.js) Using [nodejs/undici](https://github.com/nodejs/undici) for Mutual-TLS Client
+   * Authentication and Certificate-Bound Access Tokens support.
    *
    * ```ts
-   * const client: oauth.Client = {
-   *   client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
-   *   // ... other metadata
-   *   [oauth.clockSkew]: +(60 * 60),
-   * }
+   * import * as undici from 'undici'
+   * import * as oauth from 'oauth4webapi'
+   *
+   * // Prerequisites
+   * let as!: oauth.AuthorizationServer
+   * let client!: oauth.Client & { use_mtls_endpoint_aliases: true }
+   * let params!: URLSearchParams
+   * let key!: string // PEM-encoded key
+   * let cert!: string // PEM-encoded certificate
+   *
+   * const agent = new undici.Agent({ connect: { key, cert } })
+   *
+   * const response = await oauth.pushedAuthorizationRequest(as, client, params, {
+   *   [oauth.customFetch]: (...args) =>
+   *     undici.fetch(args[0], { ...args[1], dispatcher: agent }),
+   * })
    * ```
    *
    * @example
    *
-   * When the client's local clock is mistakenly 1 hour in the future
+   * (Deno) Using Deno.createHttpClient API for Mutual-TLS Client Authentication and
+   * Certificate-Bound Access Tokens support.
    *
    * ```ts
-   * const client: oauth.Client = {
-   *   client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
-   *   // ... other metadata
-   *   [oauth.clockSkew]: -(60 * 60),
-   * }
+   * import * as oauth from 'oauth4webapi'
+   *
+   * // Prerequisites
+   * let as!: oauth.AuthorizationServer
+   * let client!: oauth.Client & { use_mtls_endpoint_aliases: true }
+   * let params!: URLSearchParams
+   * let key!: string // PEM-encoded key
+   * let cert!: string // PEM-encoded certificate
+   *
+   * const agent = Deno.createHttpClient({ key, cert })
+   *
+   * const response = await oauth.pushedAuthorizationRequest(as, client, params, {
+   *   [oauth.customFetch]: (...args) => fetch(args[0], { ...args[1], client: agent }),
+   * })
    * ```
+   *
+   * @see [RFC 8705 - OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens](https://www.rfc-editor.org/rfc/rfc8705.html)
+   */
+  use_mtls_endpoint_aliases?: boolean
+
+  /**
+   * See {@link clockSkew}.
    */
   [clockSkew]?: number
 
   /**
-   * Use to set allowed client's clock tolerance when checking DateTime JWT Claims. Only positive
-   * finite values representing seconds are allowed. Default is `30` (30 seconds).
-   *
-   * @example
-   *
-   * Tolerate 30 seconds clock skew when validating JWT claims like exp or nbf.
-   *
-   * ```ts
-   * const client: oauth.Client = {
-   *   client_id: 'abc4ba37-4ab8-49b5-99d4-9441ba35d428',
-   *   // ... other metadata
-   *   [oauth.clockTolerance]: 30,
-   * }
-   * ```
+   * See {@link clockTolerance}.
    */
   [clockTolerance]?: number
+
+  /**
+   * See {@link jweDecrypt}.
+   */
+  [jweDecrypt]?: JweDecryptFunction
 
   [metadata: string]: JsonValue | undefined
 }
@@ -950,9 +1136,16 @@ const SUPPORTED_JWS_ALGS: JWSAlgorithm[] = [
   'EdDSA',
 ]
 
+export interface JWKSCacheOptions {
+  /**
+   * See {@link jwksCache}.
+   */
+  [jwksCache]?: JWKSCacheInput
+}
+
 export interface HttpRequestOptions {
   /**
-   * An AbortSignal instance, or a factory returning one, to abort the HTTP Request(s) triggered by
+   * An AbortSignal instance, or a factory returning one, to abort the HTTP request(s) triggered by
    * this function's invocation.
    *
    * @example
@@ -966,14 +1159,14 @@ export interface HttpRequestOptions {
   signal?: (() => AbortSignal) | AbortSignal
 
   /**
-   * Headers to additionally send with the HTTP Request(s) triggered by this function's invocation.
+   * Headers to additionally send with the HTTP request(s) triggered by this function's invocation.
    */
   headers?: [string, string][] | Record<string, string> | Headers
 
   /**
    * See {@link customFetch}.
    */
-  [customFetch]?: typeof fetch
+  [customFetch]?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 }
 
 export interface DiscoveryRequestOptions extends HttpRequestOptions {
@@ -1097,8 +1290,8 @@ function validateString(input: unknown): input is string {
 }
 
 /**
- * Validates Response instance to be one coming from the authorization server's well-known discovery
- * endpoint.
+ * Validates {@link !Response} instance to be one coming from the authorization server's well-known
+ * discovery endpoint.
  *
  * @param expectedIssuerIdentifier Expected Issuer Identifier value.
  * @param response Resolved value from {@link discoveryRequest}.
@@ -1194,7 +1387,7 @@ export function generateRandomNonce(): string {
 }
 
 /**
- * Calculates the PKCE `code_verifier` value to send with an authorization request using the S256
+ * Calculates the PKCE `code_challenge` value to send with an authorization request using the S256
  * PKCE Code Challenge Method transformation.
  *
  * @param codeVerifier `code_verifier` value generated e.g. from {@link generateRandomCodeVerifier}.
@@ -1216,6 +1409,7 @@ export async function calculatePKCECodeChallenge(codeVerifier: string): Promise<
 interface NormalizedKeyInput {
   key?: CryptoKey
   kid?: string
+  modifyAssertion?: ModifyAssertionFunction
 }
 
 function getKeyAndKid(input: CryptoKey | PrivateKey | undefined): NormalizedKeyInput {
@@ -1231,7 +1425,11 @@ function getKeyAndKid(input: CryptoKey | PrivateKey | undefined): NormalizedKeyI
     throw new TypeError('"kid" must be a non-empty string')
   }
 
-  return { key: input.key, kid: input.kid }
+  return {
+    key: input.key,
+    kid: input.kid,
+    modifyAssertion: input[modifyAssertion],
+  }
 }
 
 export interface DPoPOptions extends CryptoKeyPair {
@@ -1253,6 +1451,13 @@ export interface DPoPOptions extends CryptoKeyPair {
    * will be used automatically.
    */
   nonce?: string
+
+  /**
+   * Use to modify the DPoP Proof JWT right before it is signed.
+   *
+   * @see {@link modifyAssertion}
+   */
+  [modifyAssertion]?: ModifyAssertionFunction
 }
 
 export interface DPoPRequestOptions {
@@ -1262,9 +1467,16 @@ export interface DPoPRequestOptions {
   DPoP?: DPoPOptions
 }
 
+/**
+ * @ignore
+ *
+ * @deprecated Use {@link Client.use_mtls_endpoint_aliases `client.use_mtls_endpoint_aliases`}.
+ */
 export interface UseMTLSAliasOptions {
   /**
-   * See {@link useMtlsAlias}.
+   * @ignore
+   *
+   * @deprecated Use {@link Client.use_mtls_endpoint_aliases `client.use_mtls_endpoint_aliases`}.
    */
   [useMtlsAlias]?: boolean
 }
@@ -1309,7 +1521,7 @@ function clientSecretBasic(clientId: string, clientSecret: string) {
  * Determines an RSASSA-PSS algorithm identifier from CryptoKey instance properties.
  */
 function psAlg(key: CryptoKey): JWSAlgorithm {
-  switch ((<RsaHashedKeyAlgorithm>key.algorithm).hash.name) {
+  switch ((key.algorithm as RsaHashedKeyAlgorithm).hash.name) {
     case 'SHA-256':
       return 'PS256'
     case 'SHA-384':
@@ -1325,7 +1537,7 @@ function psAlg(key: CryptoKey): JWSAlgorithm {
  * Determines an RSASSA-PKCS1-v1_5 algorithm identifier from CryptoKey instance properties.
  */
 function rsAlg(key: CryptoKey): JWSAlgorithm {
-  switch ((<RsaHashedKeyAlgorithm>key.algorithm).hash.name) {
+  switch ((key.algorithm as RsaHashedKeyAlgorithm).hash.name) {
     case 'SHA-256':
       return 'RS256'
     case 'SHA-384':
@@ -1341,7 +1553,7 @@ function rsAlg(key: CryptoKey): JWSAlgorithm {
  * Determines an ECDSA algorithm identifier from CryptoKey instance properties.
  */
 function esAlg(key: CryptoKey): JWSAlgorithm {
-  switch ((<EcKeyAlgorithm>key.algorithm).namedCurve) {
+  switch ((key.algorithm as EcKeyAlgorithm).namedCurve) {
     case 'P-256':
       return 'ES256'
     case 'P-384':
@@ -1397,7 +1609,7 @@ function clientAssertion(as: AuthorizationServer, client: Client) {
   const now = epochTime() + getClockSkew(client)
   return {
     jti: randomBytes(),
-    aud: [as.issuer, as.token_endpoint],
+    aud: [as.issuer, as.token_endpoint!],
     exp: now + 60,
     iat: now,
     nbf: now,
@@ -1414,15 +1626,14 @@ async function privateKeyJwt(
   client: Client,
   key: CryptoKey,
   kid?: string,
+  modifyAssertion?: ModifyAssertionFunction,
 ) {
-  return jwt(
-    {
-      alg: keyToJws(key),
-      kid,
-    },
-    clientAssertion(as, client),
-    key,
-  )
+  const header = { alg: keyToJws(key), kid }
+  const payload = clientAssertion(as, client)
+
+  modifyAssertion?.(header, payload)
+
+  return jwt(header, payload, key)
 }
 
 function assertAs(as: AuthorizationServer): as is AuthorizationServer {
@@ -1507,13 +1718,13 @@ async function clientAuthentication(
           '"options.clientPrivateKey" must be provided when "client.token_endpoint_auth_method" is "private_key_jwt"',
         )
       }
-      const { key, kid } = getKeyAndKid(clientPrivateKey)
+      const { key, kid, modifyAssertion } = getKeyAndKid(clientPrivateKey)
       if (!isPrivateKey(key)) {
         throw new TypeError('"options.clientPrivateKey.key" must be a private CryptoKey')
       }
       body.set('client_id', client.client_id)
       body.set('client_assertion_type', 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer')
-      body.set('client_assertion', await privateKeyJwt(as, client, key, kid))
+      body.set('client_assertion', await privateKeyJwt(as, client, key, kid, modifyAssertion))
       break
     }
     // @ts-expect-error
@@ -1536,7 +1747,7 @@ async function clientAuthentication(
  */
 async function jwt(
   header: CompactJWSHeaderParameters,
-  claimsSet: Record<string, unknown>,
+  payload: Record<string, unknown>,
   key: CryptoKey,
 ) {
   if (!key.usages.includes('sign')) {
@@ -1544,7 +1755,7 @@ async function jwt(
       'CryptoKey instances used for signing assertions must include "sign" in their "usages"',
     )
   }
-  const input = `${b64u(buf(JSON.stringify(header)))}.${b64u(buf(JSON.stringify(claimsSet)))}`
+  const input = `${b64u(buf(JSON.stringify(header)))}.${b64u(buf(JSON.stringify(payload)))}`
   const signature = b64u(await crypto.subtle.sign(keyToSubtle(key), key, buf(input)))
   return `${input}.${signature}`
 }
@@ -1573,7 +1784,7 @@ export async function issueRequestObject(
 
   parameters = new URLSearchParams(parameters)
 
-  const { key, kid } = getKeyAndKid(privateKey)
+  const { key, kid, modifyAssertion } = getKeyAndKid(privateKey)
   if (!isPrivateKey(key)) {
     throw new TypeError('"privateKey.key" must be a private CryptoKey')
   }
@@ -1581,7 +1792,7 @@ export async function issueRequestObject(
   parameters.set('client_id', client.client_id)
 
   const now = epochTime() + getClockSkew(client)
-  const claims: Record<string, unknown> = {
+  const claims: Record<string, JsonValue> = {
     ...Object.fromEntries(parameters.entries()),
     jti: randomBytes(),
     aud: as.issuer,
@@ -1641,15 +1852,15 @@ export async function issueRequestObject(
     }
   }
 
-  return jwt(
-    {
-      alg: keyToJws(key),
-      typ: 'oauth-authz-req+jwt',
-      kid,
-    },
-    claims,
-    key,
-  )
+  const header = {
+    alg: keyToJws(key),
+    typ: 'oauth-authz-req+jwt',
+    kid,
+  }
+
+  modifyAssertion?.(header, claims)
+
+  return jwt(header, claims, key)
 }
 
 /**
@@ -1682,24 +1893,23 @@ async function dpopProofJwt(
   }
 
   const now = epochTime() + clockSkew
-  const proof = await jwt(
-    {
-      alg: keyToJws(privateKey),
-      typ: 'dpop+jwt',
-      jwk: await publicJwk(publicKey),
-    },
-    {
-      iat: now,
-      jti: randomBytes(),
-      htm,
-      nonce,
-      htu: `${url.origin}${url.pathname}`,
-      ath: accessToken ? b64u(await crypto.subtle.digest('SHA-256', buf(accessToken))) : undefined,
-    },
-    privateKey,
-  )
+  const header = {
+    alg: keyToJws(privateKey),
+    typ: 'dpop+jwt',
+    jwk: await publicJwk(publicKey),
+  }
+  const payload = {
+    iat: now,
+    jti: randomBytes(),
+    htm,
+    nonce,
+    htu: `${url.origin}${url.pathname}`,
+    ath: accessToken ? b64u(await crypto.subtle.digest('SHA-256', buf(accessToken))) : undefined,
+  }
 
-  headers.set('dpop', proof)
+  options[modifyAssertion]?.(header, payload)
+
+  headers.set('dpop', await jwt(header, payload, privateKey))
 }
 
 let jwkCache: WeakMap<CryptoKey, JWK>
@@ -1722,10 +1932,10 @@ async function publicJwk(key: CryptoKey) {
 function validateEndpoint(
   value: unknown,
   endpoint: keyof AuthorizationServer,
-  options?: UseMTLSAliasOptions,
+  useMtlsAlias: boolean,
 ) {
   if (typeof value !== 'string') {
-    if (options?.[useMtlsAlias]) {
+    if (useMtlsAlias) {
       throw new TypeError(`"as.mtls_endpoint_aliases.${endpoint}" must be a string`)
     }
 
@@ -1738,13 +1948,21 @@ function validateEndpoint(
 function resolveEndpoint(
   as: AuthorizationServer,
   endpoint: keyof AuthorizationServer,
-  options?: UseMTLSAliasOptions,
+  useMtlsAlias = false,
 ) {
-  if (options?.[useMtlsAlias] && as.mtls_endpoint_aliases && endpoint in as.mtls_endpoint_aliases) {
-    return validateEndpoint(as.mtls_endpoint_aliases[endpoint], endpoint, options)
+  if (useMtlsAlias && as.mtls_endpoint_aliases && endpoint in as.mtls_endpoint_aliases) {
+    return validateEndpoint(as.mtls_endpoint_aliases[endpoint], endpoint, useMtlsAlias)
   }
 
-  return validateEndpoint(as[endpoint], endpoint)
+  return validateEndpoint(as[endpoint], endpoint, useMtlsAlias)
+}
+
+function alias(client: Client, options?: UseMTLSAliasOptions): boolean {
+  if (client.use_mtls_endpoint_aliases || options?.[useMtlsAlias]) {
+    return true
+  }
+
+  return false
 }
 
 /**
@@ -1769,7 +1987,7 @@ export async function pushedAuthorizationRequest(
   assertAs(as)
   assertClient(client)
 
-  const url = resolveEndpoint(as, 'pushed_authorization_request_endpoint', options)
+  const url = resolveEndpoint(as, 'pushed_authorization_request_endpoint', alias(client, options))
 
   const body = new URLSearchParams(parameters)
   body.set('client_id', client.client_id)
@@ -1813,6 +2031,9 @@ export interface OAuth2Error {
  * @group Token Revocation
  * @group Refreshing an Access Token
  * @group Pushed Authorization Requests (PAR)
+ * @group JWT Bearer Token Grant Type
+ * @group SAML 2.0 Bearer Assertion Grant Type
+ * @group Token Exchange Grant Type
  */
 export function isOAuth2Error(
   input?:
@@ -1827,7 +2048,7 @@ export function isOAuth2Error(
     | URLSearchParams
     | UserInfoResponse,
 ): input is OAuth2Error {
-  const value = <unknown>input
+  const value = input as unknown
   if (typeof value !== 'object' || Array.isArray(value) || value === null) {
     return false
   }
@@ -1872,7 +2093,7 @@ const SCHEMES_REGEXP = /(?:^|, ?)([0-9a-zA-Z!#$%&'*+\-.^_`|~]+)(?=$|[ ,])/g
 function wwwAuth(scheme: string, params: string): WWWAuthenticateChallenge {
   const arr = params.split(SPLIT_REGEXP).slice(1)
   if (!arr.length) {
-    return { scheme: <Lowercase<string>>scheme.toLowerCase(), parameters: {} }
+    return { scheme: scheme.toLowerCase() as Lowercase<string>, parameters: {} }
   }
   arr[arr.length - 1] = arr[arr.length - 1].replace(/,$/, '')
   const parameters: WWWAuthenticateChallenge['parameters'] = {}
@@ -1883,19 +2104,19 @@ function wwwAuth(scheme: string, params: string): WWWAuthenticateChallenge {
         arr[idx] += arr[i]
       }
     }
-    const key = <Lowercase<string>>arr[idx - 1].replace(/^(?:, ?)|=$/g, '').toLowerCase()
+    const key = arr[idx - 1].replace(/^(?:, ?)|=$/g, '').toLowerCase() as Lowercase<string>
     // @ts-expect-error
     parameters[key] = unquote(arr[idx])
   }
 
   return {
-    scheme: <Lowercase<string>>scheme.toLowerCase(),
+    scheme: scheme.toLowerCase() as Lowercase<string>,
     parameters,
   }
 }
 
 /**
- * Parses the `WWW-Authenticate` HTTP Header from a Response instance.
+ * Parses the `WWW-Authenticate` HTTP Header from a {@link !Response} instance.
  *
  * @returns Array of {@link WWWAuthenticateChallenge} objects. Their order from the response is
  *   preserved. `undefined` when there wasn't a `WWW-Authenticate` HTTP Header returned.
@@ -1910,6 +2131,9 @@ function wwwAuth(scheme: string, params: string): WWWAuthenticateChallenge {
  * @group Token Revocation
  * @group Refreshing an Access Token
  * @group Pushed Authorization Requests (PAR)
+ * @group JWT Bearer Token Grant Type
+ * @group SAML 2.0 Bearer Assertion Grant Type
+ * @group Token Exchange Grant Type
  */
 export function parseWwwAuthenticateChallenges(
   response: Response,
@@ -1947,7 +2171,7 @@ export function parseWwwAuthenticateChallenges(
 }
 
 /**
- * Validates Response instance to be one coming from the
+ * Validates {@link !Response} instance to be one coming from the
  * {@link AuthorizationServer.pushed_authorization_request_endpoint `as.pushed_authorization_request_endpoint`}.
  *
  * @param as Authorization Server Metadata.
@@ -2009,11 +2233,7 @@ export interface ProtectedResourceRequestOptions
   extends Omit<HttpRequestOptions, 'headers'>,
     DPoPRequestOptions {
   /**
-   * Use to adjust the client's assumed current time. Positive and negative finite values
-   * representing seconds are allowed. Default is `0` (Date.now() + 0 seconds is used).
-   *
-   * This option only affects the request if the {@link ProtectedResourceRequestOptions.DPoP DPoP}
-   * option is also used.
+   * See {@link clockSkew}.
    */
   [clockSkew]?: number
 }
@@ -2067,7 +2287,7 @@ export async function protectedResourceRequest(
       headers,
       options.DPoP,
       url,
-      'GET',
+      method.toUpperCase(),
       getClockSkew({ [clockSkew]: options?.[clockSkew] }),
       accessToken,
     )
@@ -2113,7 +2333,7 @@ export async function userInfoRequest(
   assertAs(as)
   assertClient(client)
 
-  const url = resolveEndpoint(as, 'userinfo_endpoint', options)
+  const url = resolveEndpoint(as, 'userinfo_endpoint', alias(client, options))
 
   const headers = prepareHeaders(options?.headers)
   if (client.userinfo_signed_response_alg) {
@@ -2164,41 +2384,88 @@ export interface UserInfoResponse {
   readonly [claim: string]: JsonValue | undefined
 }
 
-let jwksCache: WeakMap<AuthorizationServer, JWKSCache>
-interface JWKSCache {
-  jwks: JsonWebKeySet
-  iat: number
-  age: number
+let jwksMap: WeakMap<AuthorizationServer, ExportedJWKSCache & { age: number }>
+
+export interface ExportedJWKSCache {
+  jwks: JWKS
+  uat: number
+}
+
+export type JWKSCacheInput = ExportedJWKSCache | Record<string, never>
+
+function setJwksCache(
+  as: AuthorizationServer,
+  jwks: JWKS,
+  uat: number,
+  cache?: JWKSCacheInput,
+): undefined {
+  jwksMap ||= new WeakMap()
+  jwksMap.set(as, {
+    jwks,
+    uat,
+    get age() {
+      return epochTime() - this.uat
+    },
+  })
+
+  if (cache) {
+    Object.assign(cache, { jwks: structuredClone(jwks), uat })
+  }
+}
+
+function isFreshJwksCache(input: unknown): input is ExportedJWKSCache {
+  if (typeof input !== 'object' || input === null) {
+    return false
+  }
+
+  if (!('uat' in input) || typeof input.uat !== 'number' || epochTime() - input.uat >= 300) {
+    return false
+  }
+
+  if (
+    !('jwks' in input) ||
+    !isJsonObject(input.jwks) ||
+    !Array.isArray(input.jwks.keys) ||
+    !Array.prototype.every.call(input.jwks.keys, isJsonObject)
+  ) {
+    return false
+  }
+
+  return true
+}
+
+function clearJwksCache(as: AuthorizationServer, cache?: Partial<JWKSCacheInput>) {
+  jwksMap?.delete(as)
+  delete cache?.jwks
+  delete cache?.uat
 }
 
 async function getPublicSigKeyFromIssuerJwksUri(
   as: AuthorizationServer,
-  options: HttpRequestOptions | undefined,
+  options: (HttpRequestOptions & JWKSCacheOptions) | undefined,
   header: CompactJWSHeaderParameters,
 ): Promise<CryptoKey> {
   const { alg, kid } = header
   checkSupportedJwsAlg(alg)
 
-  let jwks: JsonWebKeySet
+  if (!jwksMap?.has(as) && isFreshJwksCache(options?.[jwksCache])) {
+    setJwksCache(as, options?.[jwksCache].jwks, options?.[jwksCache].uat)
+  }
+
+  let jwks: JWKS
   let age: number
-  jwksCache ||= new WeakMap()
-  if (jwksCache.has(as)) {
-    ;({ jwks, age } = jwksCache.get(as)!)
+
+  if (jwksMap?.has(as)) {
+    ;({ jwks, age } = jwksMap.get(as)!)
     if (age >= 300) {
       // force a re-fetch every 5 minutes
-      jwksCache.delete(as)
+      clearJwksCache(as, options?.[jwksCache])
       return getPublicSigKeyFromIssuerJwksUri(as, options, header)
     }
   } else {
     jwks = await jwksRequest(as, options).then(processJwksResponse)
     age = 0
-    jwksCache.set(as, {
-      jwks,
-      iat: epochTime(),
-      get age() {
-        return epochTime() - this.iat
-      },
-    })
+    setJwksCache(as, jwks, epochTime(), options?.[jwksCache])
   }
 
   let kty: string
@@ -2260,7 +2527,7 @@ async function getPublicSigKeyFromIssuerJwksUri(
   if (!length) {
     if (age >= 60) {
       // allow re-fetch if cache is at least 1 minute old
-      jwksCache.delete(as)
+      clearJwksCache(as, options?.[jwksCache])
       return getPublicSigKeyFromIssuerJwksUri(as, options, header)
     }
     throw new OPE('error when selecting a JWT verification key, no applicable keys found')
@@ -2281,7 +2548,8 @@ async function getPublicSigKeyFromIssuerJwksUri(
 }
 
 /**
- * DANGER ZONE
+ * DANGER ZONE - This option has security implications that must be understood, assessed for
+ * applicability, and accepted before use.
  *
  * Use this as a value to {@link processUserInfoResponse} `expectedSubject` parameter to skip the
  * `sub` claim value check.
@@ -2295,7 +2563,7 @@ function getContentType(response: Response) {
 }
 
 /**
- * Validates Response instance to be one coming from the
+ * Validates {@link !Response} instance to be one coming from the
  * {@link AuthorizationServer.userinfo_endpoint `as.userinfo_endpoint`}.
  *
  * @param as Authorization Server Metadata.
@@ -2334,7 +2602,7 @@ export async function processUserInfoResponse(
   let json: JsonValue
   if (getContentType(response) === 'application/jwt') {
     assertReadableResponse(response)
-    const { claims } = await validateJwt(
+    const { claims, jwt } = await validateJwt(
       await response.text(),
       checkSigningAlgorithm.bind(
         undefined,
@@ -2344,11 +2612,13 @@ export async function processUserInfoResponse(
       noSignatureCheck,
       getClockSkew(client),
       getClockTolerance(client),
+      client[jweDecrypt],
     )
       .then(validateOptionalAudience.bind(undefined, client.client_id))
       .then(validateOptionalIssuer.bind(undefined, as.issuer))
 
-    json = <JsonValue>claims
+    jwtResponseBodies.set(response, jwt)
+    json = claims as JsonValue
   } else {
     if (client.userinfo_signed_response_alg) {
       throw new OPE('JWT UserInfo Response expected')
@@ -2423,7 +2693,7 @@ async function tokenEndpointRequest(
   parameters: URLSearchParams,
   options?: Omit<TokenEndpointRequestOptions, 'additionalParameters'>,
 ): Promise<Response> {
-  const url = resolveEndpoint(as, 'token_endpoint', options)
+  const url = resolveEndpoint(as, 'token_endpoint', alias(client, options))
 
   parameters.set('grant_type', grantType)
   const headers = prepareHeaders(options?.headers)
@@ -2468,7 +2738,8 @@ export async function refreshTokenGrantRequest(
   return tokenEndpointRequest(as, client, 'refresh_token', parameters, options)
 }
 
-const idTokenClaims = new WeakMap<TokenEndpointResponse, IDToken>()
+const idTokenClaims = new WeakMap<TokenEndpointResponse, [IDToken, string]>()
+const jwtResponseBodies = new WeakMap<Response, string>()
 
 /**
  * Returns ID Token claims validated during {@link processAuthorizationCodeOpenIDResponse}.
@@ -2505,7 +2776,145 @@ export function getValidatedIdTokenClaims(
     )
   }
 
-  return claims
+  return claims[0]
+}
+
+export interface ValidateSignatureOptions extends HttpRequestOptions, JWKSCacheOptions {}
+
+/**
+ * Validates the JWS Signature of an ID Token included in results previously resolved from
+ * {@link processAuthorizationCodeOpenIDResponse}, {@link processRefreshTokenResponse}, or
+ * {@link processDeviceCodeResponse} for non-repudiation purposes.
+ *
+ * Note: Validating signatures of ID Tokens received via direct communication between the Client and
+ * the Token Endpoint (which it is here) is not mandatory since the TLS server validation is used to
+ * validate the issuer instead of checking the token signature. You only need to use this method for
+ * non-repudiation purposes.
+ *
+ * Note: Supports only digital signatures.
+ *
+ * @param as Authorization Server Metadata.
+ * @param ref Value previously resolved from {@link processAuthorizationCodeOpenIDResponse},
+ *   {@link processRefreshTokenResponse}, or {@link processDeviceCodeResponse}.
+ *
+ * @returns Resolves if the signature validates, rejects otherwise.
+ *
+ * @group Authorization Code Grant w/ OpenID Connect (OIDC)
+ * @group FAPI 1.0 Advanced
+ *
+ * @see [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation)
+ */
+export async function validateIdTokenSignature(
+  as: AuthorizationServer,
+  ref: OpenIDTokenEndpointResponse | TokenEndpointResponse,
+  options?: ValidateSignatureOptions,
+): Promise<void> {
+  assertAs(as)
+
+  if (!idTokenClaims.has(ref)) {
+    throw new OPE('"ref" does not contain an ID Token to verify the signature of')
+  }
+
+  const {
+    0: protectedHeader,
+    1: payload,
+    2: encodedSignature,
+  } = idTokenClaims.get(ref)![1].split('.')
+
+  const header: CompactJWSHeaderParameters = JSON.parse(buf(b64u(protectedHeader)))
+
+  if (header.alg.startsWith('HS')) {
+    throw new UnsupportedOperationError()
+  }
+
+  let key!: CryptoKey
+  key = await getPublicSigKeyFromIssuerJwksUri(as, options, header)
+  await validateJwsSignature(protectedHeader, payload, key, b64u(encodedSignature))
+}
+
+async function validateJwtResponseSignature(
+  as: AuthorizationServer,
+  ref: Response,
+  options?: ValidateSignatureOptions,
+): Promise<void> {
+  assertAs(as)
+
+  if (!jwtResponseBodies.has(ref)) {
+    throw new OPE('"ref" does not contain a processed JWT Response to verify the signature of')
+  }
+
+  const {
+    0: protectedHeader,
+    1: payload,
+    2: encodedSignature,
+  } = jwtResponseBodies.get(ref)!.split('.')
+
+  const header: CompactJWSHeaderParameters = JSON.parse(buf(b64u(protectedHeader)))
+
+  if (header.alg.startsWith('HS')) {
+    throw new UnsupportedOperationError()
+  }
+
+  let key!: CryptoKey
+  key = await getPublicSigKeyFromIssuerJwksUri(as, options, header)
+  await validateJwsSignature(protectedHeader, payload, key, b64u(encodedSignature))
+}
+
+/**
+ * Validates the JWS Signature of a JWT {@link !Response} body of response previously processed by
+ * {@link processUserInfoResponse} for non-repudiation purposes.
+ *
+ * Note: Validating signatures of JWTs received via direct communication between the Client and a
+ * TLS-secured Endpoint (which it is here) is not mandatory since the TLS server validation is used
+ * to validate the issuer instead of checking the token signature. You only need to use this method
+ * for non-repudiation purposes.
+ *
+ * Note: Supports only digital signatures.
+ *
+ * @param as Authorization Server Metadata.
+ * @param ref Response previously processed by {@link processUserInfoResponse}.
+ *
+ * @returns Resolves if the signature validates, rejects otherwise.
+ *
+ * @group Authorization Code Grant w/ OpenID Connect (OIDC)
+ * @group OpenID Connect (OIDC) UserInfo
+ *
+ * @see [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
+ */
+export function validateJwtUserInfoSignature(
+  as: AuthorizationServer,
+  ref: Response,
+  options?: ValidateSignatureOptions,
+): Promise<void> {
+  return validateJwtResponseSignature(as, ref, options)
+}
+
+/**
+ * Validates the JWS Signature of an JWT {@link !Response} body of responses previously processed by
+ * {@link processIntrospectionResponse} for non-repudiation purposes.
+ *
+ * Note: Validating signatures of JWTs received via direct communication between the Client and a
+ * TLS-secured Endpoint (which it is here) is not mandatory since the TLS server validation is used
+ * to validate the issuer instead of checking the token signature. You only need to use this method
+ * for non-repudiation purposes.
+ *
+ * Note: Supports only digital signatures.
+ *
+ * @param as Authorization Server Metadata.
+ * @param ref Response previously processed by {@link processIntrospectionResponse}.
+ *
+ * @returns Resolves if the signature validates, rejects otherwise.
+ *
+ * @group Token Introspection
+ *
+ * @see [draft-ietf-oauth-jwt-introspection-response-12 - JWT Response for OAuth Token Introspection](https://www.ietf.org/archive/id/draft-ietf-oauth-jwt-introspection-response-12.html#section-5)
+ */
+export function validateJwtIntrospectionSignature(
+  as: AuthorizationServer,
+  ref: Response,
+  options?: ValidateSignatureOptions,
+): Promise<void> {
+  return validateJwtResponseSignature(as, ref, options)
 }
 
 async function processGenericAccessTokenResponse(
@@ -2582,7 +2991,7 @@ async function processGenericAccessTokenResponse(
     }
 
     if (json.id_token) {
-      const { claims } = await validateJwt(
+      const { claims, jwt } = await validateJwt(
         json.id_token,
         checkSigningAlgorithm.bind(
           undefined,
@@ -2592,20 +3001,29 @@ async function processGenericAccessTokenResponse(
         noSignatureCheck,
         getClockSkew(client),
         getClockTolerance(client),
+        client[jweDecrypt],
       )
         .then(validatePresence.bind(undefined, ['aud', 'exp', 'iat', 'iss', 'sub']))
         .then(validateIssuer.bind(undefined, as.issuer))
         .then(validateAudience.bind(undefined, client.client_id))
 
-      if (Array.isArray(claims.aud) && claims.aud.length !== 1 && claims.azp !== client.client_id) {
-        throw new OPE('unexpected ID Token "azp" (authorized party) claim value')
+      if (Array.isArray(claims.aud) && claims.aud.length !== 1) {
+        if (claims.azp === undefined) {
+          throw new OPE('ID Token "aud" (audience) claim includes additional untrusted audiences')
+        }
+        if (claims.azp !== client.client_id) {
+          throw new OPE('unexpected ID Token "azp" (authorized party) claim value')
+        }
       }
 
-      if (client.require_auth_time && typeof claims.auth_time !== 'number') {
-        throw new OPE('unexpected ID Token "auth_time" (authentication time) claim value')
+      if (
+        claims.auth_time !== undefined &&
+        (!Number.isFinite(claims.auth_time) || Math.sign(claims.auth_time as number) !== 1)
+      ) {
+        throw new OPE('ID Token "auth_time" (authentication time) must be a positive number')
       }
 
-      idTokenClaims.set(json, <IDToken>claims)
+      idTokenClaims.set(json, [claims as IDToken, jwt])
     }
   }
 
@@ -2613,7 +3031,7 @@ async function processGenericAccessTokenResponse(
 }
 
 /**
- * Validates Refresh Token Grant Response instance to be one coming from the
+ * Validates Refresh Token Grant {@link !Response} instance to be one coming from the
  * {@link AuthorizationServer.token_endpoint `as.token_endpoint`}.
  *
  * @param as Authorization Server Metadata.
@@ -2774,6 +3192,7 @@ interface ParsedJWT {
   header: CompactJWSHeaderParameters
   claims: JWTPayload
   signature: Uint8Array
+  jwt: string
 }
 
 const jwtClaimNames = {
@@ -2888,8 +3307,8 @@ export const expectNoNonce: unique symbol = Symbol()
 export const skipAuthTimeCheck: unique symbol = Symbol()
 
 /**
- * (OpenID Connect only) Validates Authorization Code Grant Response instance to be one coming from
- * the {@link AuthorizationServer.token_endpoint `as.token_endpoint`}.
+ * (OpenID Connect only) Validates Authorization Code Grant {@link !Response} instance to be one
+ * coming from the {@link AuthorizationServer.token_endpoint `as.token_endpoint`}.
  *
  * @param as Authorization Server Metadata.
  * @param client Client Metadata.
@@ -2938,7 +3357,7 @@ export async function processAuthorizationCodeOpenIDResponse(
 
   if (maxAge !== skipAuthTimeCheck) {
     if (typeof maxAge !== 'number' || maxAge < 0) {
-      throw new TypeError('"options.max_age" must be a non-negative number')
+      throw new TypeError('"maxAge" must be a non-negative number')
     }
 
     const now = epochTime() + getClockSkew(client)
@@ -2967,12 +3386,13 @@ export async function processAuthorizationCodeOpenIDResponse(
       }
   }
 
-  return <OpenIDTokenEndpointResponse>result
+  return result as OpenIDTokenEndpointResponse
 }
 
 /**
- * (OAuth 2.0 without OpenID Connect only) Validates Authorization Code Grant Response instance to
- * be one coming from the {@link AuthorizationServer.token_endpoint `as.token_endpoint`}.
+ * (OAuth 2.0 without OpenID Connect only) Validates Authorization Code Grant {@link !Response}
+ * instance to be one coming from the
+ * {@link AuthorizationServer.token_endpoint `as.token_endpoint`}.
  *
  * @param as Authorization Server Metadata.
  * @param client Client Metadata.
@@ -3007,7 +3427,7 @@ export async function processAuthorizationCodeOAuth2Response(
     delete result.id_token
   }
 
-  return <OAuth2TokenEndpointResponse>result
+  return result as OAuth2TokenEndpointResponse
 }
 
 function checkJwtType(expected: string, result: Awaited<ReturnType<typeof validateJwt>>) {
@@ -3054,7 +3474,41 @@ export async function clientCredentialsGrantRequest(
 }
 
 /**
- * Validates Client Credentials Grant Response instance to be one coming from the
+ * Performs any Grant request at the {@link AuthorizationServer.token_endpoint `as.token_endpoint`}.
+ * The purpose is to be able to execute grant requests such as Token Exchange Grant Type, JWT Bearer
+ * Token Grant Type, or SAML 2.0 Bearer Assertion Grant Type.
+ *
+ * @param as Authorization Server Metadata.
+ * @param client Client Metadata.
+ * @param grantType Grant Type.
+ *
+ * @group JWT Bearer Token Grant Type
+ * @group SAML 2.0 Bearer Assertion Grant Type
+ * @group Token Exchange Grant Type
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc8693.html Token Exchange Grant Type}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc7523.html#section-2.1 JWT Bearer Token Grant Type}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc7522.html#section-2.1 SAML 2.0 Bearer Assertion Grant Type}
+ */
+export async function genericTokenEndpointRequest(
+  as: AuthorizationServer,
+  client: Client,
+  grantType: string,
+  parameters: URLSearchParams | Record<string, string> | string[][],
+  options?: Omit<TokenEndpointRequestOptions, 'additionalParameters'>,
+): Promise<Response> {
+  assertAs(as)
+  assertClient(client)
+
+  if (!validateString(grantType)) {
+    throw new TypeError('"grantType" must be a non-empty string')
+  }
+
+  return tokenEndpointRequest(as, client, grantType, new URLSearchParams(parameters), options)
+}
+
+/**
+ * Validates Client Credentials Grant {@link !Response} instance to be one coming from the
  * {@link AuthorizationServer.token_endpoint `as.token_endpoint`}.
  *
  * @param as Authorization Server Metadata.
@@ -3080,7 +3534,7 @@ export async function processClientCredentialsResponse(
     return result
   }
 
-  return <ClientCredentialsGrantResponse>result
+  return result as ClientCredentialsGrantResponse
 }
 
 export interface RevocationRequestOptions extends HttpRequestOptions, AuthenticatedRequestOptions {
@@ -3116,7 +3570,7 @@ export async function revocationRequest(
     throw new TypeError('"token" must be a non-empty string')
   }
 
-  const url = resolveEndpoint(as, 'revocation_endpoint', options)
+  const url = resolveEndpoint(as, 'revocation_endpoint', alias(client, options))
 
   const body = new URLSearchParams(options?.additionalParameters)
   body.set('token', token)
@@ -3128,7 +3582,7 @@ export async function revocationRequest(
 }
 
 /**
- * Validates Response instance to be one coming from the
+ * Validates {@link !Response} instance to be one coming from the
  * {@link AuthorizationServer.revocation_endpoint `as.revocation_endpoint`}.
  *
  * @param response Resolved value from {@link revocationRequest}.
@@ -3210,7 +3664,7 @@ export async function introspectionRequest(
     throw new TypeError('"token" must be a non-empty string')
   }
 
-  const url = resolveEndpoint(as, 'introspection_endpoint', options)
+  const url = resolveEndpoint(as, 'introspection_endpoint', alias(client, options))
 
   const body = new URLSearchParams(options?.additionalParameters)
   body.set('token', token)
@@ -3252,7 +3706,7 @@ export interface IntrospectionResponse {
 }
 
 /**
- * Validates Response instance to be one coming from the
+ * Validates {@link !Response} instance to be one coming from the
  * {@link AuthorizationServer.introspection_endpoint `as.introspection_endpoint`}.
  *
  * @param as Authorization Server Metadata.
@@ -3291,7 +3745,7 @@ export async function processIntrospectionResponse(
   let json: JsonValue
   if (getContentType(response) === 'application/token-introspection+jwt') {
     assertReadableResponse(response)
-    const { claims } = await validateJwt(
+    const { claims, jwt } = await validateJwt(
       await response.text(),
       checkSigningAlgorithm.bind(
         undefined,
@@ -3301,13 +3755,15 @@ export async function processIntrospectionResponse(
       noSignatureCheck,
       getClockSkew(client),
       getClockTolerance(client),
+      client[jweDecrypt],
     )
       .then(checkJwtType.bind(undefined, 'token-introspection+jwt'))
       .then(validatePresence.bind(undefined, ['aud', 'iat', 'iss']))
       .then(validateIssuer.bind(undefined, as.issuer))
       .then(validateAudience.bind(undefined, client.client_id))
 
-    json = <JsonValue>claims.token_introspection
+    jwtResponseBodies.set(response, jwt)
+    json = claims.token_introspection as JsonValue
     if (!isJsonObject(json)) {
       throw new OPE('JWT "token_introspection" claim must be a JSON object')
     }
@@ -3327,7 +3783,7 @@ export async function processIntrospectionResponse(
     throw new OPE('"response" body "active" property must be a boolean')
   }
 
-  return <IntrospectionResponse>json
+  return json as IntrospectionResponse
 }
 
 async function jwksRequest(
@@ -3350,11 +3806,11 @@ async function jwksRequest(
   }).then(processDpopNonce)
 }
 
-interface JsonWebKeySet {
+export interface JWKS {
   readonly keys: JWK[]
 }
 
-async function processJwksResponse(response: Response): Promise<JsonWebKeySet> {
+async function processJwksResponse(response: Response): Promise<JWKS> {
   if (!looseInstanceOf(response, Response)) {
     throw new TypeError('"response" must be an instance of Response')
   }
@@ -3371,7 +3827,7 @@ async function processJwksResponse(response: Response): Promise<JsonWebKeySet> {
     throw new OPE('failed to parse "response" body as JSON', { cause })
   }
 
-  if (!isJsonObject<JsonWebKeySet>(json)) {
+  if (!isJsonObject<JWKS>(json)) {
     throw new OPE('"response" body must be a top level object')
   }
 
@@ -3404,7 +3860,7 @@ async function handleOAuthBodyError(response: Response): Promise<OAuth2Error | u
         if (json.scope !== undefined && typeof json.scope !== 'string') {
           delete json.scope
         }
-        return <OAuth2Error>json
+        return json as OAuth2Error
       }
     } catch {}
   }
@@ -3412,10 +3868,10 @@ async function handleOAuthBodyError(response: Response): Promise<OAuth2Error | u
 }
 
 function checkSupportedJwsAlg(alg: unknown) {
-  if (!SUPPORTED_JWS_ALGS.includes(<any>alg)) {
+  if (!SUPPORTED_JWS_ALGS.includes(alg as any)) {
     throw new UnsupportedOperationError('unsupported JWS "alg" identifier')
   }
-  return <JWSAlgorithm>alg
+  return alg
 }
 
 function checkRsaKeyAlgorithm(algorithm: RsaHashedKeyAlgorithm) {
@@ -3440,27 +3896,27 @@ function ecdsaHashName(namedCurve: string) {
 function keyToSubtle(key: CryptoKey): AlgorithmIdentifier | RsaPssParams | EcdsaParams {
   switch (key.algorithm.name) {
     case 'ECDSA':
-      return <EcdsaParams>{
+      return {
         name: key.algorithm.name,
-        hash: ecdsaHashName((<EcKeyAlgorithm>key.algorithm).namedCurve),
-      }
+        hash: ecdsaHashName((key.algorithm as EcKeyAlgorithm).namedCurve),
+      } as EcdsaParams
     case 'RSA-PSS': {
-      checkRsaKeyAlgorithm(<RsaHashedKeyAlgorithm>key.algorithm)
-      switch ((<RsaHashedKeyAlgorithm>key.algorithm).hash.name) {
+      checkRsaKeyAlgorithm(key.algorithm as RsaHashedKeyAlgorithm)
+      switch ((key.algorithm as RsaHashedKeyAlgorithm).hash.name) {
         case 'SHA-256': // Fall through
         case 'SHA-384': // Fall through
         case 'SHA-512':
-          return <RsaPssParams>{
+          return {
             name: key.algorithm.name,
             saltLength:
-              parseInt((<RsaHashedKeyAlgorithm>key.algorithm).hash.name.slice(-3), 10) >> 3,
-          }
+              parseInt((key.algorithm as RsaHashedKeyAlgorithm).hash.name.slice(-3), 10) >> 3,
+          } as RsaPssParams
         default:
           throw new UnsupportedOperationError()
       }
     }
     case 'RSASSA-PKCS1-v1_5':
-      checkRsaKeyAlgorithm(<RsaHashedKeyAlgorithm>key.algorithm)
+      checkRsaKeyAlgorithm(key.algorithm as RsaHashedKeyAlgorithm)
       return key.algorithm.name
     case 'Ed448': // Fall through
     case 'Ed25519':
@@ -3471,6 +3927,23 @@ function keyToSubtle(key: CryptoKey): AlgorithmIdentifier | RsaPssParams | Ecdsa
 
 const noSignatureCheck = Symbol()
 
+async function validateJwsSignature(
+  protectedHeader: string,
+  payload: string,
+  key: CryptoKey,
+  signature: Uint8Array,
+) {
+  const input = `${protectedHeader}.${payload}`
+  const verified = await crypto.subtle.verify(keyToSubtle(key), key, signature, buf(input))
+  if (!verified) {
+    throw new OPE('JWT signature verification failed')
+  }
+}
+
+export interface JweDecryptFunction {
+  (jwe: string): Promise<string>
+}
+
 /**
  * Minimal JWT validation implementation.
  */
@@ -3480,11 +3953,19 @@ async function validateJwt(
   getKey: ((h: CompactJWSHeaderParameters) => Promise<CryptoKey>) | typeof noSignatureCheck,
   clockSkew: number,
   clockTolerance: number,
+  decryptJwt: JweDecryptFunction | undefined,
 ): Promise<ParsedJWT & { key?: CryptoKey }> {
-  const { 0: protectedHeader, 1: payload, 2: encodedSignature, length } = jws.split('.')
+  let { 0: protectedHeader, 1: payload, 2: encodedSignature, length } = jws.split('.')
+
   if (length === 5) {
-    throw new UnsupportedOperationError('JWE structure JWTs are not supported')
+    if (decryptJwt !== undefined) {
+      jws = await decryptJwt(jws)
+      ;({ 0: protectedHeader, 1: payload, 2: encodedSignature, length } = jws.split('.'))
+    } else {
+      throw new UnsupportedOperationError('JWE structure JWTs are not supported')
+    }
   }
+
   if (length !== 3) {
     throw new OPE('Invalid JWT')
   }
@@ -3509,11 +3990,7 @@ async function validateJwt(
   let key!: CryptoKey
   if (getKey !== noSignatureCheck) {
     key = await getKey(header)
-    const input = `${protectedHeader}.${payload}`
-    const verified = await crypto.subtle.verify(keyToSubtle(key), key, signature, buf(input))
-    if (!verified) {
-      throw new OPE('JWT signature verification failed')
-    }
+    await validateJwsSignature(protectedHeader, payload, key, signature)
   }
 
   let claims: JsonValue
@@ -3566,7 +4043,7 @@ async function validateJwt(
     }
   }
 
-  return { header, claims, signature, key }
+  return { header, claims, signature, key, jwt: jws }
 }
 
 /**
@@ -3590,7 +4067,7 @@ export async function validateJwtAuthResponse(
   client: Client,
   parameters: URLSearchParams | URL,
   expectedState?: string | typeof expectNoState | typeof skipStateCheck,
-  options?: HttpRequestOptions,
+  options?: ValidateSignatureOptions,
 ): Promise<URLSearchParams | OAuth2Error> {
   assertAs(as)
   assertClient(client)
@@ -3608,10 +4085,6 @@ export async function validateJwtAuthResponse(
     throw new OPE('"parameters" does not contain a JARM response')
   }
 
-  if (typeof as.jwks_uri !== 'string') {
-    throw new TypeError('"as.jwks_uri" must be a string')
-  }
-
   const { claims } = await validateJwt(
     response,
     checkSigningAlgorithm.bind(
@@ -3622,6 +4095,7 @@ export async function validateJwtAuthResponse(
     getPublicSigKeyFromIssuerJwksUri.bind(undefined, as, options),
     getClockSkew(client),
     getClockTolerance(client),
+    client[jweDecrypt],
   )
     .then(validatePresence.bind(undefined, ['aud', 'exp', 'iss']))
     .then(validateIssuer.bind(undefined, as.issuer))
@@ -3704,7 +4178,7 @@ export async function validateDetachedSignatureResponse(
   expectedNonce: string,
   expectedState?: string | typeof expectNoState,
   maxAge?: number | typeof skipAuthTimeCheck,
-  options?: HttpRequestOptions,
+  options?: ValidateSignatureOptions,
 ): Promise<URLSearchParams | OAuth2Error> {
   assertAs(as)
   assertClient(client)
@@ -3759,10 +4233,6 @@ export async function validateDetachedSignatureResponse(
     throw new OPE('"parameters" does not contain an Authorization Code')
   }
 
-  if (typeof as.jwks_uri !== 'string') {
-    throw new TypeError('"as.jwks_uri" must be a string')
-  }
-
   const requiredClaims: (keyof typeof jwtClaimNames)[] = [
     'aud',
     'exp',
@@ -3787,6 +4257,7 @@ export async function validateDetachedSignatureResponse(
     getPublicSigKeyFromIssuerJwksUri.bind(undefined, as, options),
     getClockSkew(client),
     getClockTolerance(client),
+    client[jweDecrypt],
   )
     .then(validatePresence.bind(undefined, requiredClaims))
     .then(validateIssuer.bind(undefined, as.issuer))
@@ -3817,8 +4288,11 @@ export async function validateDetachedSignatureResponse(
     throw new OPE('invalid ID Token "s_hash" (state hash) claim value')
   }
 
-  if (client.require_auth_time !== undefined && typeof claims.auth_time !== 'number') {
-    throw new OPE('unexpected ID Token "auth_time" (authentication time) claim value')
+  if (
+    claims.auth_time !== undefined &&
+    (!Number.isFinite(claims.auth_time) || Math.sign(claims.auth_time as number) !== 1)
+  ) {
+    throw new OPE('ID Token "auth_time" (authentication time) must be a positive number')
   }
 
   maxAge ??= client.default_max_age ?? skipAuthTimeCheck
@@ -3831,12 +4305,12 @@ export async function validateDetachedSignatureResponse(
 
   if (maxAge !== skipAuthTimeCheck) {
     if (typeof maxAge !== 'number' || maxAge < 0) {
-      throw new TypeError('"options.max_age" must be a non-negative number')
+      throw new TypeError('"maxAge" must be a non-negative number')
     }
 
     const now = epochTime() + getClockSkew(client)
     const tolerance = getClockTolerance(client)
-    if ((<IDToken>claims).auth_time! + maxAge < now - tolerance) {
+    if ((claims as IDToken).auth_time! + maxAge < now - tolerance) {
       throw new OPE('too much time has elapsed since the last End-User authentication')
     }
   }
@@ -3848,8 +4322,13 @@ export async function validateDetachedSignatureResponse(
     throw new OPE('unexpected ID Token "nonce" claim value')
   }
 
-  if (Array.isArray(claims.aud) && claims.aud.length !== 1 && claims.azp !== client.client_id) {
-    throw new OPE('unexpected ID Token "azp" (authorized party) claim value')
+  if (Array.isArray(claims.aud) && claims.aud.length !== 1) {
+    if (claims.azp === undefined) {
+      throw new OPE('ID Token "aud" (audience) claim includes additional untrusted audiences')
+    }
+    if (claims.azp !== client.client_id) {
+      throw new OPE('unexpected ID Token "azp" (authorized party) claim value')
+    }
   }
 
   return result
@@ -3896,13 +4375,14 @@ function getURLSearchParameter(parameters: URLSearchParams, name: string): strin
 }
 
 /**
- * DANGER ZONE
+ * DANGER ZONE - This option has security implications that must be understood, assessed for
+ * applicability, and accepted before use.
  *
  * Use this as a value to {@link validateAuthResponse} `expectedState` parameter to skip the `state`
- * value check. This should only ever be done if you use a `state` parameter value that is integrity
- * protected and bound to the browsing session. One such mechanism to do so is described in an I-D
+ * value check when you'll be validating such `state` value yourself instead. This should only be
+ * done if you use a `state` parameter value that is integrity protected and bound to the browsing
+ * session. One such mechanism to do so is described in an I-D
  * [draft-bradley-oauth-jwt-encoded-state-09](https://datatracker.ietf.org/doc/html/draft-bradley-oauth-jwt-encoded-state-09).
- * It is expected you'll validate such `state` value yourself.
  */
 export const skipStateCheck: unique symbol = Symbol()
 
@@ -4067,7 +4547,7 @@ export async function deviceAuthorizationRequest(
   assertAs(as)
   assertClient(client)
 
-  const url = resolveEndpoint(as, 'device_authorization_endpoint', options)
+  const url = resolveEndpoint(as, 'device_authorization_endpoint', alias(client, options))
 
   const body = new URLSearchParams(parameters)
   body.set('client_id', client.client_id)
@@ -4090,7 +4570,7 @@ export interface DeviceAuthorizationResponse {
 }
 
 /**
- * Validates Response instance to be one coming from the
+ * Validates {@link !Response} instance to be one coming from the
  * {@link AuthorizationServer.device_authorization_endpoint `as.device_authorization_endpoint`}.
  *
  * @param as Authorization Server Metadata.
@@ -4205,7 +4685,7 @@ export async function deviceCodeGrantRequest(
 }
 
 /**
- * Validates Device Authorization Grant Response instance to be one coming from the
+ * Validates Device Authorization Grant {@link !Response} instance to be one coming from the
  * {@link AuthorizationServer.token_endpoint `as.token_endpoint`}.
  *
  * @param as Authorization Server Metadata.
@@ -4240,13 +4720,13 @@ export interface GenerateKeyPairOptions {
   modulusLength?: number
 
   /**
-   * (EdDSA algorithms only) The EdDSA sub-type. Default is `Ed25519`.
+   * (EdDSA algorithm only) The EdDSA sub-type. Default is `Ed25519`.
    */
   crv?: 'Ed25519' | 'Ed448'
 }
 
 /**
- * Generates a CryptoKeyPair for a given JWS `alg` Algorithm identifier.
+ * Generates a {@link !CryptoKeyPair} for a given JWS `alg` Algorithm identifier.
  *
  * @param alg Supported JWS `alg` Algorithm identifier.
  *
@@ -4261,7 +4741,7 @@ export async function generateKeyPair(
   }
   const algorithm: RsaHashedKeyGenParams | EcKeyGenParams | AlgorithmIdentifier = algToSubtle(
     alg,
-    alg === 'EdDSA' ? options?.crv ?? 'Ed25519' : undefined,
+    alg === 'EdDSA' ? (options?.crv ?? 'Ed25519') : undefined,
   )
 
   if (alg.startsWith('PS') || alg.startsWith('RS')) {
@@ -4271,9 +4751,10 @@ export async function generateKeyPair(
     })
   }
 
-  return <Promise<CryptoKeyPair>>(
-    crypto.subtle.generateKey(algorithm, options?.extractable ?? false, ['sign', 'verify'])
-  )
+  return crypto.subtle.generateKey(algorithm, options?.extractable ?? false, [
+    'sign',
+    'verify',
+  ]) as Promise<CryptoKeyPair>
 }
 
 export interface JWTAccessTokenClaims extends JWTPayload {
@@ -4290,19 +4771,19 @@ export interface JWTAccessTokenClaims extends JWTPayload {
   readonly [claim: string]: JsonValue | undefined
 }
 
-export interface ValidateJWTAccessTokenOptions extends HttpRequestOptions {
+export interface ValidateJWTAccessTokenOptions extends HttpRequestOptions, JWKSCacheOptions {
   /**
    * Indicates whether DPoP use is required.
    */
   requireDPoP?: boolean
 
   /**
-   * Same functionality as in {@link Client}
+   * See {@link clockSkew}.
    */
   [clockSkew]?: number
 
   /**
-   * Same functionality as in {@link Client}
+   * See {@link clockTolerance}.
    */
   [clockTolerance]?: number
 }
@@ -4319,7 +4800,7 @@ async function validateDPoP(
   request: Request,
   accessToken: string,
   accessTokenClaims: JWTPayload,
-  options?: ValidateJWTAccessTokenOptions,
+  options?: Pick<ValidateJWTAccessTokenOptions, typeof clockSkew | typeof clockTolerance>,
 ) {
   const header = request.headers.get('dpop')
   if (header === null) {
@@ -4358,6 +4839,7 @@ async function validateDPoP(
     },
     clockSkew,
     getClockTolerance(options),
+    undefined,
   )
     .then(checkJwtType.bind(undefined, 'dpop+jwt'))
     .then(validatePresence.bind(undefined, ['iat', 'jti', 'ath', 'htm', 'htu']))
@@ -4426,7 +4908,7 @@ async function validateDPoP(
 }
 
 /**
- * Validates use of JSON Web Token (JWT) OAuth 2.0 Access Tokens for a given {@link Request} as per
+ * Validates use of JSON Web Token (JWT) OAuth 2.0 Access Tokens for a given {@link !Request} as per
  * RFC 6750, RFC 9068, and RFC 9449.
  *
  * The only supported means of sending access tokens is via the Authorization Request Header Field
@@ -4448,9 +4930,7 @@ async function validateDPoP(
  * function's execution.
  *
  * @param as Authorization Server to accept JWT Access Tokens from.
- * @param request
  * @param expectedAudience Audience identifier the resource server expects for itself.
- * @param options
  *
  * @group JWT Access Tokens
  *
@@ -4512,6 +4992,7 @@ export async function validateJwtAccessToken(
     getPublicSigKeyFromIssuerJwksUri.bind(undefined, as, options),
     getClockSkew(options),
     getClockTolerance(options),
+    undefined,
   )
     .then(checkJwtType.bind(undefined, 'at+jwt'))
     .then(validatePresence.bind(undefined, requiredClaims))
@@ -4551,7 +5032,7 @@ export async function validateJwtAccessToken(
     await validateDPoP(as, request, accessToken, claims, options)
   }
 
-  return <JWTAccessTokenClaims>claims
+  return claims as JWTAccessTokenClaims
 }
 
 /**
@@ -4569,19 +5050,19 @@ export const experimental_customFetch = customFetch
 /**
  * @ignore
  *
- * @deprecated Use {@link useMtlsAlias}.
+ * @deprecated Use {@link Client.use_mtls_endpoint_aliases `client.use_mtls_endpoint_aliases`}.
  */
 export const experimentalUseMtlsAlias = useMtlsAlias
 /**
  * @ignore
  *
- * @deprecated Use {@link useMtlsAlias}.
+ * @deprecated Use {@link Client.use_mtls_endpoint_aliases `client.use_mtls_endpoint_aliases`}.
  */
 export const experimental_useMtlsAlias = useMtlsAlias
 /**
  * @ignore
  *
- * @deprecated Use {@link UseMTLSAliasOptions}.
+ * @deprecated Use {@link Client.use_mtls_endpoint_aliases `client.use_mtls_endpoint_aliases`}.
  */
 export type ExperimentalUseMTLSAliasOptions = UseMTLSAliasOptions
 /**
@@ -4595,10 +5076,41 @@ export type IntrospectionConfirmationClaims = ConfirmationClaims
  *
  * @deprecated Use {@link validateDetachedSignatureResponse}.
  */
-export const experimental_validateDetachedSignatureResponse = validateDetachedSignatureResponse
+export const experimental_validateDetachedSignatureResponse = (
+  ...args: Parameters<typeof validateDetachedSignatureResponse>
+): ReturnType<typeof validateDetachedSignatureResponse> =>
+  validateDetachedSignatureResponse(...args)
 /**
  * @ignore
  *
  * @deprecated Use {@link validateJwtAccessToken}.
  */
-export const experimental_validateJwtAccessToken = validateJwtAccessToken
+export const experimental_validateJwtAccessToken = (
+  ...args: Parameters<typeof validateJwtAccessToken>
+): ReturnType<typeof validateJwtAccessToken> => validateJwtAccessToken(...args)
+/**
+ * @ignore
+ *
+ * @deprecated Use {@link validateJwtUserinfoSignature}.
+ */
+export const validateJwtUserinfoSignature = (
+  ...args: Parameters<typeof validateJwtUserInfoSignature>
+): ReturnType<typeof validateJwtUserInfoSignature> => validateJwtUserInfoSignature(...args)
+/**
+ * @ignore
+ *
+ * @deprecated Use {@link jwksCache}.
+ */
+export const experimental_jwksCache = jwksCache
+/**
+ * @ignore
+ *
+ * @deprecated Use {@link ValidateSignatureOptions}.
+ */
+export interface ValidateJwtResponseSignatureOptions extends ValidateSignatureOptions {}
+/**
+ * @ignore
+ *
+ * @deprecated Use {@link ValidateSignatureOptions}.
+ */
+export interface ValidateDetachedSignatureResponseOptions extends ValidateSignatureOptions {}

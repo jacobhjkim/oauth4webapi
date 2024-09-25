@@ -2,6 +2,124 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.17.0](https://github.com/panva/oauth4webapi/compare/v2.16.0...v2.17.0) (2024-09-22)
+
+
+### Features
+
+* support client use_mtls_endpoint_aliases metadata ([60c9df4](https://github.com/panva/oauth4webapi/commit/60c9df480bf0bac4d064f9ae8867e65a30ae8e8a))
+
+
+### Documentation
+
+* fix calculatePKCECodeChallenge description ([ac014f2](https://github.com/panva/oauth4webapi/commit/ac014f2882a82e1ef688c8542b09a0cab76dcffd))
+
+
+### Refactor
+
+* deprecate the useMtlsAlias symbol and options ([d2b7cb0](https://github.com/panva/oauth4webapi/commit/d2b7cb04481c6abaca9f22befa55b8a4ac355a41))
+* use as Type for type assertions instead of <Type> ([a0ccf56](https://github.com/panva/oauth4webapi/commit/a0ccf568e6fcc11bc005a97b86e3b429ac3e86b4))
+
+## [2.16.0](https://github.com/panva/oauth4webapi/compare/v2.15.0...v2.16.0) (2024-09-16)
+
+
+### Features
+
+* add a hook for decrypting JWE assertions ([62795a6](https://github.com/panva/oauth4webapi/commit/62795a6c1905cfbcbb19b4bd86e1eef2d773baa5))
+* allow to modify issued JWT headers and payloads before signing ([30931ba](https://github.com/panva/oauth4webapi/commit/30931ba3cec58c6eaa6139734f1a399b34885a7c))
+
+
+### Documentation
+
+* update docs on useMtlsAlias ([006db55](https://github.com/panva/oauth4webapi/commit/006db55b3ddf6c4414edc21a5a9fbf358301192d))
+
+## [2.15.0](https://github.com/panva/oauth4webapi/compare/v2.14.0...v2.15.0) (2024-09-15)
+
+
+### Features
+
+* support generic token endpoint grant requests ([2f454b5](https://github.com/panva/oauth4webapi/commit/2f454b5b304039d341e06c9cdd9d6cf63663648f))
+
+## [2.14.0](https://github.com/panva/oauth4webapi/compare/v2.13.0...v2.14.0) (2024-09-15)
+
+
+### Features
+
+* add non-repudiation signature validation methods ([0916de2](https://github.com/panva/oauth4webapi/commit/0916de23c6daf93434592b1c181b27b4ed13a277))
+
+
+### Documentation
+
+* update JSDoc to use more link syntax ([d78f090](https://github.com/panva/oauth4webapi/commit/d78f090d430e7f351e33d55ac05db8e2c103d130))
+* update various comments and documentation ([9c3f1ed](https://github.com/panva/oauth4webapi/commit/9c3f1ed50df50d10d098b0168fb1a481a0f713a0))
+
+## [2.13.0](https://github.com/panva/oauth4webapi/compare/v2.12.2...v2.13.0) (2024-09-10)
+
+
+### Features
+
+* **build:** add jsr.io distribution ([dc6157f](https://github.com/panva/oauth4webapi/commit/dc6157fb24595b191a7fb3d2113c0db146798aad))
+
+## [2.12.2](https://github.com/panva/oauth4webapi/compare/v2.12.1...v2.12.2) (2024-09-09)
+
+
+### Refactor
+
+* error msg when ID Token aud is an array and azp is missing ([68e0338](https://github.com/panva/oauth4webapi/commit/68e03389176c03bad9441767fc899e3d1ec98540))
+* remove redundant checks ([763b3d0](https://github.com/panva/oauth4webapi/commit/763b3d021deaf1641d29964f865b101097973c86))
+
+
+### Documentation
+
+* remove non-described parameter JSDoc tags ([b1507b9](https://github.com/panva/oauth4webapi/commit/b1507b97e6d7bb443f8ff291a6bde4c1b15f8aee))
+* update README.md ([9d1377b](https://github.com/panva/oauth4webapi/commit/9d1377b532008b502df8e9a9158c9315997ebf9a))
+
+## [2.12.1](https://github.com/panva/oauth4webapi/compare/v2.12.0...v2.12.1) (2024-09-03)
+
+
+### Fixes
+
+* use correct "htm" in DPoP Proof via protectedResourceRequest ([3ce3be2](https://github.com/panva/oauth4webapi/commit/3ce3be2584f483feff49eebdf9225676af2c2182)), closes [#132](https://github.com/panva/oauth4webapi/issues/132)
+
+## [2.12.0](https://github.com/panva/oauth4webapi/compare/v2.11.1...v2.12.0) (2024-08-19)
+
+
+### Features
+
+* graduate jwksCache to stable API ([0e0e1d2](https://github.com/panva/oauth4webapi/commit/0e0e1d2adf7f045ac29ad5df2db65496c95a88a0))
+
+
+### Documentation
+
+* move clockSkew and clockTolerance docs to the symbol ([3b5d2ea](https://github.com/panva/oauth4webapi/commit/3b5d2eacfa9c7606467507b4e2054655e4813cbb))
+* update clockSkew and clockTolerance docs ([c97313a](https://github.com/panva/oauth4webapi/commit/c97313adc954890b6b292ce794bcb39ed0a8eac8))
+
+## [2.11.1](https://github.com/panva/oauth4webapi/compare/v2.11.0...v2.11.1) (2024-06-20)
+
+
+### Fixes
+
+* allow ID Token auth_time to be present even if client.require_auth_time is false ([caa9ab3](https://github.com/panva/oauth4webapi/commit/caa9ab3233942faec8d1fcadcb26cd75bb3854cd))
+
+## [2.11.0](https://github.com/panva/oauth4webapi/compare/v2.10.4...v2.11.0) (2024-06-19)
+
+
+### Features
+
+* add experimental support for edge compute runtimes JWKS caching ([15b7aff](https://github.com/panva/oauth4webapi/commit/15b7aff4575dc0f784f945ab3cfe7ada66c591a7))
+
+
+### Refactor
+
+* update maxAge option type check error message ([7fe3454](https://github.com/panva/oauth4webapi/commit/7fe34547e03b097d4ee9d59690033111c8df2549))
+
+
+### Documentation
+
+* clarify documentation is more an API Reference ([c96c8e0](https://github.com/panva/oauth4webapi/commit/c96c8e04065a16282dadde82828e77c23bb92c49))
+* update example import ([651e8ea](https://github.com/panva/oauth4webapi/commit/651e8ea4edee5c1dba731615ffabb8fc2bc8b36e))
+* updates for readability and consistency ([b1b8b7d](https://github.com/panva/oauth4webapi/commit/b1b8b7d35f6bedfd68f24d35b029ac474efa4608))
+
 ## [2.10.4](https://github.com/panva/oauth4webapi/compare/v2.10.3...v2.10.4) (2024-03-29)
 
 

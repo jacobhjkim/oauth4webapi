@@ -1,12 +1,6 @@
-import anyTest, { type TestFn } from 'ava'
-import {
-  importJWK,
-  type JWK,
-  calculateJwkThumbprint,
-  exportJWK,
-  decodeProtectedHeader,
-  compactDecrypt,
-} from 'jose'
+import anyTest from 'ava'
+import type { Macro, TestFn } from 'ava'
+import { importJWK, type JWK, calculateJwkThumbprint, exportJWK, compactDecrypt } from 'jose'
 import * as undici from 'undici'
 
 export const test = anyTest as TestFn<{ instance: Test }>
@@ -89,6 +83,13 @@ function usesPar(plan: Plan) {
   return plan.name.startsWith('fapi2') || variant.fapi_auth_request_method === 'pushed'
 }
 
+export function nonRepudiation(plan: Plan, variant: Record<string, string>) {
+  return (
+    variant.fapi_client_type === 'oidc' &&
+    (plan.name.startsWith('fapi2-message-signing') || plan.name.startsWith('fapi1'))
+  )
+}
+
 function usesRequestObject(planName: string, variant: Record<string, string>) {
   if (planName.startsWith('fapi1')) {
     return true
@@ -121,29 +122,13 @@ function responseType(planName: string, variant: Record<string, string>) {
   return variant.fapi_response_mode === 'jarm' ? 'code' : 'code id_token'
 }
 
-async function decryptIdToken(jwe: string) {
-  return new TextDecoder().decode(
-    (
-      await compactDecrypt(
-        jwe,
-        await importPrivateKey('RSA-OAEP', configuration.client.jwks.keys[0]),
-        {
-          keyManagementAlgorithms: ['RSA-OAEP'],
-        },
-      ).catch((cause) => {
-        throw new oauth.OperationProcessingError('failed to decrypt ID Token', { cause })
-      })
-    ).plaintext,
-  )
-}
-
 interface MacroOptions {
   useNonce?: boolean
   useState?: boolean
 }
 
-export const green = (options?: MacroOptions) =>
-  test.macro({
+export const flow = (options?: MacroOptions) => {
+  return test.macro({
     async exec(t, module: ModulePrescription) {
       t.timeout(15000)
 
@@ -173,9 +158,20 @@ export const green = (options?: MacroOptions) =>
 
       t.log('AS Metadata discovered for', as.issuer)
 
+      const decoder = new TextDecoder()
       const client: oauth.Client = {
         client_id: configuration.client.client_id,
         client_secret: configuration.client.client_secret,
+        async [oauth.jweDecrypt](jwe) {
+          const { plaintext } = await compactDecrypt(
+            jwe,
+            await importPrivateKey('RSA-OAEP', configuration.client.jwks.keys[0]),
+            { keyManagementAlgorithms: ['RSA-OAEP'] },
+          ).catch((cause) => {
+            throw new oauth.OperationProcessingError('failed to decrypt', { cause })
+          })
+          return decoder.decode(plaintext)
+        },
       }
 
       switch (variant.client_auth_type) {
@@ -235,24 +231,24 @@ export const green = (options?: MacroOptions) =>
 
         switch (endpoint) {
           case 'token':
-            return <oauth.TokenEndpointRequestOptions>{
+            return {
               [oauth.useMtlsAlias]: mtlsAuth || mtlsConstrain ? true : false,
               [oauth.customFetch]: mtlsAuth || mtlsConstrain ? mtlsFetch : undefined,
-            }
+            } as oauth.TokenEndpointRequestOptions
           case 'par':
-            return <oauth.PushedAuthorizationRequestOptions>{
+            return {
               [oauth.useMtlsAlias]: mtlsAuth ? true : false,
               [oauth.customFetch]: mtlsAuth ? mtlsFetch : undefined,
-            }
+            } as oauth.PushedAuthorizationRequestOptions
           case 'userinfo':
-            return <oauth.UserInfoRequestOptions>{
+            return {
               [oauth.useMtlsAlias]: mtlsConstrain ? true : false,
               [oauth.customFetch]: mtlsConstrain ? mtlsFetch : undefined,
-            }
+            } as oauth.UserInfoRequestOptions
           case 'resource':
-            return <oauth.ProtectedResourceRequestOptions>{
+            return {
               [oauth.customFetch]: mtlsConstrain ? mtlsFetch : undefined,
-            }
+            } as oauth.ProtectedResourceRequestOptions
           default:
             throw new Error()
         }
@@ -314,7 +310,7 @@ export const green = (options?: MacroOptions) =>
 
       let DPoP!: CryptoKeyPair
       if (usesDpop(variant)) {
-        DPoP = await oauth.generateKeyPair(<oauth.JWSAlgorithm>JWS_ALGORITHM)
+        DPoP = await oauth.generateKeyPair(JWS_ALGORITHM as oauth.JWSAlgorithm)
         authorizationUrl.searchParams.set(
           'dpop_jkt',
           await calculateJwkThumbprint(await exportJWK(DPoP.publicKey)),
@@ -379,18 +375,11 @@ export const green = (options?: MacroOptions) =>
         if (usesJarm(variant)) {
           params = await oauth.validateJwtAuthResponse(as, client, currentUrl, state)
         } else if (response_type === 'code id_token') {
-          const fragmentParams = new URLSearchParams(currentUrl.hash.slice(1))
-          const idToken = fragmentParams.get('id_token')!
-          let decrypted
-          if (decodeProtectedHeader(idToken).enc) {
-            fragmentParams.set('id_token', await decryptIdToken(idToken))
-            decrypted = true
-          }
           params = await oauth.validateDetachedSignatureResponse(
             as,
             client,
-            decrypted ? fragmentParams : currentUrl,
-            <string>nonce,
+            currentUrl,
+            nonce as string,
             state,
           )
         } else {
@@ -408,7 +397,7 @@ export const green = (options?: MacroOptions) =>
           oauth.authorizationCodeGrantRequest(
             as,
             client,
-            <Exclude<typeof params, oauth.OAuth2Error>>params,
+            params as Exclude<typeof params, oauth.OAuth2Error>,
             configuration.client.redirect_uri,
             code_verifier,
             {
@@ -427,27 +416,11 @@ export const green = (options?: MacroOptions) =>
           throw new Error()
         }
 
-        if (response_type === 'code id_token') {
-          try {
-            const body = await response.clone().json()
-            const { id_token } = body
-            if (decodeProtectedHeader(id_token).enc) {
-              const newResponse = new Response(
-                JSON.stringify({
-                  ...body,
-                  id_token: await decryptIdToken(id_token),
-                }),
-                response,
-              )
-              response = newResponse
-            }
-          } catch {}
-        }
-
         let result:
           | oauth.OAuth2TokenEndpointResponse
           | oauth.OpenIDTokenEndpointResponse
           | oauth.OAuth2Error
+
         if (scope.includes('openid')) {
           result = await oauth.processAuthorizationCodeOpenIDResponse(as, client, response, nonce)
         } else {
@@ -476,6 +449,10 @@ export const green = (options?: MacroOptions) =>
           } else {
             throw new Error() // Handle OAuth 2.0 response body error
           }
+        }
+
+        if (nonRepudiation(plan, variant)) {
+          await oauth.validateIdTokenSignature(as, result)
         }
 
         t.log('token endpoint response body', { ...result })
@@ -568,8 +545,9 @@ export const green = (options?: MacroOptions) =>
       }
 
       await waitForState(instance)
-
-      t.log('Test Finished')
+      if (module.skipLogTestFinished !== true) {
+        t.log('Test Finished')
+      }
       t.pass()
     },
     title(providedTitle = '', module: ModulePrescription) {
@@ -581,9 +559,9 @@ export const green = (options?: MacroOptions) =>
       return `${providedTitle}${plan.name} (${plan.id}) - ${module.testModule}`
     },
   })
+}
 
-export const red = (options?: MacroOptions) => {
-  const macro = green(options)
+export const rejects = (macro: Macro<[module: ModulePrescription], { instance: Test }>) => {
   return test.macro({
     async exec(
       t,
@@ -592,7 +570,7 @@ export const red = (options?: MacroOptions) => {
       expectedErrorName: string = 'OperationProcessingError',
     ) {
       await t
-        .throwsAsync(() => <any>macro.exec(t, module), {
+        .throwsAsync(() => macro.exec(t, { ...module, skipLogTestFinished: true }) as any, {
           message: expectedMessage,
           name: expectedErrorName,
         })
@@ -609,20 +587,19 @@ export const red = (options?: MacroOptions) => {
       t.log('Test Finished')
       t.pass()
     },
-    title: <any>macro.title,
+    title: macro.title as any,
   })
 }
 
-export const skippable = (options?: MacroOptions) => {
-  const macro = green(options)
+export const skippable = (macro: Macro<[module: ModulePrescription], { instance: Test }>) => {
   return test.macro({
     async exec(t, module: ModulePrescription) {
-      await Promise.allSettled([macro.exec(t, module)])
+      await Promise.allSettled([macro.exec(t, { ...module, skipLogTestFinished: true })])
 
       await waitForState(t.context.instance, { results: new Set(['SKIPPED', 'PASSED']) })
-      t.log('Test result is SKIPPED')
+      t.log('Test Finished')
       t.pass()
     },
-    title: <any>macro.title,
+    title: macro.title as any,
   })
 }

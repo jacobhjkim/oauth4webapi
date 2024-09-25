@@ -1,6 +1,12 @@
 import type QUnit from 'qunit'
 
-import { isDpopNonceError, setup } from './helper.js'
+import {
+  assertNotOAuth2Error,
+  assertNoWwwAuthenticateChallenges,
+  isDpopNonceError,
+  setup,
+  unexpectedAuthorizationServerError,
+} from './helper.js'
 import * as lib from '../src/index.js'
 import { keys } from './keys.js'
 import * as jose from 'jose'
@@ -10,16 +16,6 @@ export default (QUnit: QUnit) => {
   module('end2end-device-code.ts')
 
   const alg = 'ES256'
-
-  const dpopOptions = [false, true]
-
-  const cartesianMatrix = []
-
-  for (const dpop of dpopOptions) {
-    cartesianMatrix.push({
-      dpop,
-    })
-  }
 
   for (const dpop of [true, false]) {
     test(`end-to-end device flow ${dpop ? 'w/ dpop' : ''}`, async (t) => {
@@ -31,8 +27,10 @@ export default (QUnit: QUnit) => {
         false,
         false,
         false,
+        ['refresh_token', 'urn:ietf:params:oauth:grant-type:device_code'],
+        false,
       )
-      const DPoP = dpop ? await lib.generateKeyPair(<lib.JWSAlgorithm>alg) : undefined
+      const DPoP = dpop ? await lib.generateKeyPair(alg as lib.JWSAlgorithm) : undefined
 
       const as = await lib
         .discoveryRequest(issuerIdentifier)
@@ -44,16 +42,10 @@ export default (QUnit: QUnit) => {
       params.set('scope', 'api:write')
 
       let response = await lib.deviceAuthorizationRequest(as, client, params)
-      if (lib.parseWwwAuthenticateChallenges(response)) {
-        t.ok(0)
-        throw new Error()
-      }
+      assertNoWwwAuthenticateChallenges(response)
 
       let result = await lib.processDeviceAuthorizationResponse(as, client, response)
-      if (lib.isOAuth2Error(result)) {
-        t.ok(0)
-        throw new Error()
-      }
+      if (!assertNotOAuth2Error(result)) return
       const { verification_uri_complete, device_code } = result
 
       await fetch('http://localhost:3000/drive', {
@@ -68,24 +60,26 @@ export default (QUnit: QUnit) => {
           lib.deviceCodeGrantRequest(as, client, device_code, { DPoP })
         let response = await deviceCodeGrantRequest()
 
-        if (lib.parseWwwAuthenticateChallenges(response)) {
-          t.ok(0)
-          throw new Error()
-        }
+        assertNoWwwAuthenticateChallenges(response)
 
         const processDeviceCodeResponse = () => lib.processDeviceCodeResponse(as, client, response)
         let result = await processDeviceCodeResponse()
+        let i = 0
+        while (lib.isOAuth2Error(result) && result.error === 'authorization_pending') {
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          response = await deviceCodeGrantRequest()
+          result = await processDeviceCodeResponse()
+          i++
+          if (i === 5) break
+        }
+
         if (lib.isOAuth2Error(result)) {
           if (isDpopNonceError(result)) {
             response = await deviceCodeGrantRequest()
             result = await processDeviceCodeResponse()
-            if (lib.isOAuth2Error(result)) {
-              t.ok(0)
-              throw new Error()
-            }
+            if (!assertNotOAuth2Error(result)) return
           } else {
-            t.ok(0)
-            throw new Error()
+            throw unexpectedAuthorizationServerError(result)
           }
         }
 
@@ -93,16 +87,26 @@ export default (QUnit: QUnit) => {
         t.ok(access_token)
         t.equal(token_type, dpop ? 'dpop' : 'bearer')
 
+        const verb = ['GET', 'POST', 'PATCH'][Math.floor(Math.random() * 3)]
+
         await lib.protectedResourceRequest(
           access_token,
-          'GET',
+          verb,
           new URL('http://localhost:3001/resource'),
           undefined,
           undefined,
           {
-            DPoP,
+            DPoP: DPoP
+              ? {
+                  ...DPoP,
+                  [lib.modifyAssertion](h, p) {
+                    t.equal(h.alg, 'ES256')
+                    p.foo = 'bar'
+                  },
+                }
+              : undefined,
             async [lib.customFetch](...params: Parameters<typeof fetch>) {
-              const url = new URL(<string>params[0])
+              const url = new URL(params[0] as string)
               const { headers, method } = params[1]!
               const request = new Request(url, { headers, method })
 
@@ -119,6 +123,8 @@ export default (QUnit: QUnit) => {
                   jwtAccessToken.cnf!.jkt,
                   await jose.calculateJwkThumbprint(await jose.exportJWK(DPoP.publicKey)),
                 )
+
+                t.propContains(await jose.decodeJwt(request.headers.get('dpop')!), { foo: 'bar' })
               } else {
                 t.equal(jwtAccessToken.cnf, undefined)
               }

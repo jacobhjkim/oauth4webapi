@@ -2,53 +2,46 @@
 
 [💗 Help the project](https://github.com/sponsors/panva)
 
+Support from the community to continue maintaining and improving this module is welcome. If you find the module useful, please consider supporting the project by [becoming a sponsor](https://github.com/sponsors/panva).
+
+***
+
 ## Indexable
 
-▪ [parameter: `string`]: [`JsonValue`](../types/JsonValue.md) \| `undefined`
-
-## Table of contents
-
-### Properties
-
-- [type](AuthorizationDetails.md#type)
-- [actions](AuthorizationDetails.md#actions)
-- [datatypes](AuthorizationDetails.md#datatypes)
-- [identifier](AuthorizationDetails.md#identifier)
-- [locations](AuthorizationDetails.md#locations)
-- [privileges](AuthorizationDetails.md#privileges)
+ \[`parameter`: `string`\]: [`JsonValue`](../type-aliases/JsonValue.md) \| `undefined`
 
 ## Properties
 
 ### type
 
-• `Readonly` **type**: `string`
+• `readonly` **type**: `string`
 
-___
+***
 
-### actions
+### actions?
 
-• `Optional` `Readonly` **actions**: `string`[]
+• `readonly` `optional` **actions**: `string`[]
 
-___
+***
 
-### datatypes
+### datatypes?
 
-• `Optional` `Readonly` **datatypes**: `string`[]
+• `readonly` `optional` **datatypes**: `string`[]
 
-___
+***
 
-### identifier
+### identifier?
 
-• `Optional` `Readonly` **identifier**: `string`
+• `readonly` `optional` **identifier**: `string`
 
-___
+***
 
-### locations
+### locations?
 
-• `Optional` `Readonly` **locations**: `string`[]
+• `readonly` `optional` **locations**: `string`[]
 
-___
+***
 
-### privileges
+### privileges?
 
-• `Optional` `Readonly` **privileges**: `string`[]
+• `readonly` `optional` **privileges**: `string`[]
